@@ -30,6 +30,8 @@ MLflow opens through the configured mlflow hostname, then redirects the authoriz
 
 Apply the AWS foundation first. Install the standard Gateway API v1.6.0 CRDs, the AWS Load Balancer Controller v3.6.2 Gateway CRDs and the controller. Its service account needs the controller's reviewed AWS permissions through IRSA. Deploy each backend Service before publishing its route. Run from a workstation with access to the private EKS API.
 
+The foundation now defines that controller role. bootstrap_cluster.sh contains the pinned controller, cert-manager, External Secrets Operator and Argo CD setup. Follow Argo CD deployment for the bootstrap and the first GitOps applications.
+
 Create the local Kubernetes connection before using kubectl:
 
 ```bash

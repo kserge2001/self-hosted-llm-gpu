@@ -1,0 +1,13 @@
+clusterName: ${CLUSTER_NAME}
+region: us-east-1
+vpcId: ${VPC_ID}
+enableCertManager: true
+enableShield: false
+enableWaf: false
+enableWafv2: false
+nodeSelector:
+  astra/tier: cpu
+serviceAccount:
+  name: aws-load-balancer-controller
+  annotations:
+    eks.amazonaws.com/role-arn: ${LOAD_BALANCER_CONTROLLER_ROLE_ARN}

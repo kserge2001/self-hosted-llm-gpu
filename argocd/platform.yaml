@@ -1,0 +1,84 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: astra
+  namespace: argocd
+spec:
+  description: CareCart platform deployments from the approved repository
+  sourceRepos:
+    - ${GITOPS_REPOSITORY_URL}
+    - https://prometheus-community.github.io/helm-charts
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+  clusterResourceWhitelist:
+    - group: storage.k8s.io
+      kind: StorageClass
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+    - group: ''
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: astra-storage
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+spec:
+  project: astra
+  source:
+    repoURL: ${GITOPS_REPOSITORY_URL}
+    targetRevision: ${GITOPS_REVISION}
+    path: k8s
+    directory:
+      include: storageclass.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: astra-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '10'
+spec:
+  project: astra
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 92.16.0
+      helm:
+        releaseName: monitoring
+        valueFiles:
+          - $values/k8s/monitoring-values.yaml
+    - repoURL: ${GITOPS_REPOSITORY_URL}
+      targetRevision: ${GITOPS_REVISION}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

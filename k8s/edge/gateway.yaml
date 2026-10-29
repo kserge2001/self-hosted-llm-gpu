@@ -9,6 +9,7 @@ metadata:
   name: astra-public
   namespace: platform-system
 spec:
+  loadBalancerName: ${CLUSTER_NAME}-edge
   scheme: internet-facing
   ipAddressType: ipv4
   sourceRanges: ${ALLOWED_CIDRS}
@@ -46,8 +47,7 @@ spec:
       hostname: '*.${DOMAIN_NAME}'
       port: 443
       protocol: HTTPS
-      tls:
-        mode: Terminate
+      # ACM TLS is configured by listenerConfigurations.defaultCertificate above.
       allowedRoutes:
         kinds:
           - kind: HTTPRoute

@@ -71,8 +71,8 @@ def validate(config):
         network = ipaddress.ip_network(cidr, strict=True)
         if network.version != 4 or network.prefixlen == 0:
             raise ValueError("Only explicit IPv4 source CIDRs are supported")
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", config["cluster_name"]):
-        raise ValueError("Use a lowercase cluster name, at most 41 characters")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,26}", config["cluster_name"]):
+        raise ValueError("Use a lowercase cluster name, at most 27 characters")
     if not re.fullmatch(
         r"arn:aws:acm:us-east-1:\d{12}:certificate/[a-f0-9-]+",
         config["acm_certificate_arn"],
@@ -469,4 +469,6 @@ if __name__ == "__main__":
         main()
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
         print(f"Domain setup failed: {error}", file=sys.stderr)
+        if isinstance(error, subprocess.CalledProcessError) and error.stderr:
+            print(error.stderr.strip(), file=sys.stderr)
         sys.exit(1)

@@ -9,7 +9,13 @@ provider "aws" {
   region = "us-east-1"
   default_tags { tags = { Project = "astra", ManagedBy = "Terraform", Environment = "development" } }
 }
-variable "name" { type = string }
+variable "name" {
+  type = string
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{0,26}$", var.name))
+    error_message = "Use a lowercase name up to 27 characters so the ALB name fits its limit."
+  }
+}
 variable "azs" {
   type = list(string)
   validation {

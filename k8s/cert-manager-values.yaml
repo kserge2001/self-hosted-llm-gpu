@@ -1,0 +1,10 @@
+crds:
+  enabled: true
+nodeSelector:
+  astra/tier: cpu
+webhook:
+  nodeSelector:
+    astra/tier: cpu
+cainjector:
+  nodeSelector:
+    astra/tier: cpu

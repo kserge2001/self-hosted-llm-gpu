@@ -1,0 +1,8 @@
+global:
+  nodeSelector:
+    astra/tier: cpu
+dex:
+  enabled: false
+server:
+  ingress:
+    enabled: false
