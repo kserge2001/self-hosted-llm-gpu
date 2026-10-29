@@ -79,7 +79,7 @@ class DomainTests(unittest.TestCase):
         resources = domains.build_routes(fixture(), list(domains.catalog()))
         authentication = {r["metadata"]["name"]: r for r in resources if r["kind"] == "ListenerRuleConfiguration"}
         for route in resources:
-            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] in ("astra-inference", "astra-argocd", "astra-grafana"):
+            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] in ("astra-inference", "astra-argocd", "astra-grafana", "astra-litellm"):
                 continue
             reference = route["spec"]["rules"][0]["filters"][0]["extensionRef"]["name"]
             protection = authentication[reference]
@@ -225,6 +225,15 @@ class DomainTests(unittest.TestCase):
         resources = domains.build_routes(config, ["grafana"])
         route = next(r for r in resources if r["kind"] == "HTTPRoute")
         self.assertNotIn("filters", route["spec"]["rules"][0])
+        self.assertFalse(any(r["kind"] == "ListenerRuleConfiguration" for r in resources))
+
+    def test_litellm_uses_its_own_login(self):
+        config = fixture()
+        config["browser_auth"] = None
+        resources = domains.build_routes(config, ["litellm", "inference"])
+        for route in resources:
+            if route["kind"] == "HTTPRoute":
+                self.assertNotIn("filters", route["spec"]["rules"][0])
         self.assertFalse(any(r["kind"] == "ListenerRuleConfiguration" for r in resources))
 
 

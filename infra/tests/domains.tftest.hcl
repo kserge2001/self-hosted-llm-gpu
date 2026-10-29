@@ -55,8 +55,8 @@ run "partial_override_and_cognito_callbacks" {
     error_message = "Include the workstation and VPC NAT addresses."
   }
   assert {
-    condition     = contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://models.example.com/oauth2/idpresponse") && length(aws_cognito_user_pool_client.dashboards[0].callback_urls) == 4 && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://argocd.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://grafana.example.com/oauth2/idpresponse")
-    error_message = "Browser callbacks must exclude the model API, Argo CD and Grafana."
+    condition     = contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://models.example.com/oauth2/idpresponse") && length(aws_cognito_user_pool_client.dashboards[0].callback_urls) == 3 && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://argocd.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://grafana.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://litellm.example.com/oauth2/idpresponse")
+    error_message = "Browser callbacks must exclude the model API and dashboards with their own login."
   }
 }
 

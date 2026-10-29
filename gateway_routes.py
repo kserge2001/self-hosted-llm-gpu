@@ -50,18 +50,11 @@ def build_resources(config, services, catalog):
     }
     template = (ROOT / "k8s/edge/gateway.yaml").read_text(encoding="utf-8")
     resources = list(yaml.safe_load_all(render(template, values)))
-    namespaces = set()
     backends = set()
     for service in sorted(set(services)):
         target = catalog[service]
         namespace = target["namespace"]
         name = "astra-" + service.replace("_", "-")
-        if namespace not in namespaces:
-            resources.append({
-                "apiVersion": "v1", "kind": "Namespace",
-                "metadata": {"name": namespace, "labels": {"astra/public-routes": config["cluster_name"]}},
-            })
-            namespaces.add(namespace)
         # Both LiteLLM routes share one Service and one target-group configuration.
         backend = (namespace, target["service"])
         if backend not in backends:
@@ -82,8 +75,8 @@ def build_resources(config, services, catalog):
             "matches": [{"path": {"type": "PathPrefix", "value": target["path"]}}],
             "backendRefs": [{"name": target["service"], "port": target["port"]}],
         }
-        # Argo CD and Grafana handle their own logins. Model requests use keys.
-        if service not in ("inference", "argocd", "grafana"):
+        # These dashboards handle their own logins. Model requests use keys.
+        if service not in ("inference", "argocd", "grafana", "litellm"):
             authentication = browser_authentication(config, service, namespace)
             resources.append(authentication)
             rule["filters"] = [{

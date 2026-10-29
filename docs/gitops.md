@@ -64,4 +64,6 @@ Sync astra-gateway in Argo CD. The initialization job runs first. Wait for the s
 
 The UI and gateway health can be checked before model deployment. An actual model response requires the approved model release and healthy vLLM pods. That end-to-end check remains incomplete until it is performed.
 
+LiteLLM opens its own login directly over HTTPS. Its chart supplies the hostname; publishing a route does not change its Deployment. Rolling updates replace one replica at a time, keeping the other available without requiring capacity for a third gateway pod.
+
 Model and assistant deployment applications still need their complete release configuration before they can be registered and verified.

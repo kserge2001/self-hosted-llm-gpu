@@ -114,7 +114,7 @@ def build_routes(config, services):
     for service in services:
         if service not in routes:
             raise ValueError("Select supported service keys")
-        if service not in ("inference", "argocd", "grafana") and not config.get("browser_auth"):
+        if service not in ("inference", "argocd", "grafana", "litellm") and not config.get("browser_auth"):
             raise ValueError("Set approved browser_auth before publishing browser services")
     return build_resources(config, services, routes)
 
@@ -324,7 +324,7 @@ def preflight(config, services, context, run=command):
             raise ValueError(
                 f"{key} needs its expected ClusterIP service and port before exposure"
             )
-        if key not in ("inference", "argocd", "grafana") and config["browser_auth"]["type"] == "oidc":
+        if key not in ("inference", "argocd", "grafana", "litellm") and config["browser_auth"]["type"] == "oidc":
             secret = config["browser_auth"]["parameters"]["secretName"]
             run(
                 kube + ["-n", route["namespace"], "get", "secret", secret, "-o", "name"]
@@ -332,7 +332,7 @@ def preflight(config, services, context, run=command):
     # 4. Check the Cognito return addresses before exposing browser pages.
     browser_services = []
     for service in services:
-        if service not in ("inference", "argocd", "grafana"):
+        if service not in ("inference", "argocd", "grafana", "litellm"):
             browser_services.append(service)
     if browser_services and config["browser_auth"]["type"] == "cognito":
         parameters = config["browser_auth"]["parameters"]
@@ -401,18 +401,8 @@ def apply_bundle(config, services, directory, context):
                 patch,
             ]
         )
-    if "litellm" in services:
-        command(
-            kube
-            + [
-                "-n",
-                "gateway",
-                "set",
-                "env",
-                "deployment/litellm",
-                "PROXY_BASE_URL=https://" + config["hosts"]["litellm"],
-            ]
-        )
+    # LiteLLM's hostname comes from its GitOps values and synchronized secret.
+    # Do not change its Deployment here and trigger a competing rollout.
     if "grafana" in services:
         command(
             kube
@@ -426,6 +416,11 @@ def apply_bundle(config, services, directory, context):
                 "GF_SERVER_ROOT_URL=https://" + config["hosts"]["grafana"],
             ]
         )
+    # Application namespaces already exist; preserve their Argo CD annotations.
+    namespaces = {catalog()[service]["namespace"] for service in services}
+    for namespace in sorted(namespaces):
+        command(kube + ["label", "namespace", namespace,
+                       "astra/public-routes=" + config["cluster_name"], "--overwrite"])
     print(
         command(kube + ["apply", "-f", str(Path(directory) / "routes.yaml")]), end=""
     )
