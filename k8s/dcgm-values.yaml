@@ -1,3 +1,5 @@
+image:
+  digest: sha256:148b0c025e5f2850256816fa33754fbf4733b7a086697a95613fc0ba3db5b003
 nodeSelector: {astra/tier: gpu}
 tolerations:
   - key: nvidia.com/gpu

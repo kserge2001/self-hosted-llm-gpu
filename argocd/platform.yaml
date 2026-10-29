@@ -8,7 +8,10 @@ spec:
   sourceRepos:
     - ${GITOPS_REPOSITORY_URL}
     - https://prometheus-community.github.io/helm-charts
+    - https://nvidia.github.io/dcgm-exporter/helm-charts
   destinations:
+    - server: https://kubernetes.default.svc
+      namespace: gpu-system
     - server: https://kubernetes.default.svc
       namespace: gateway
     - server: https://kubernetes.default.svc

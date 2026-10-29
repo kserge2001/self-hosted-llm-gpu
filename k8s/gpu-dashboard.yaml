@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: astra-gpu-dashboard
+  namespace: monitoring
+  labels: {grafana_dashboard: "1"}
+data:
+  astra-gpu.json: |
+    {
+      "uid": "astra-gpu", "title": "Astra GPU health", "schemaVersion": 39,
+      "version": 1, "editable": false, "refresh": "10s",
+      "tags": ["astra", "gpu"], "timezone": "browser",
+      "time": {"from": "now-30m", "to": "now"},
+      "templating": {"list": [{"name": "datasource", "type": "datasource", "query": "prometheus"}]},
+      "panels": [
+        {"id": 1, "title": "GPU utilization", "type": "timeseries",
+         "description": "Low utilization before model deployment is expected. Check demand and availability requirements before removing capacity.",
+         "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+         "datasource": {"type": "prometheus", "uid": "$datasource"},
+         "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []},
+         "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_GPU_UTIL", "legendFormat": "{{Hostname}}"}]},
+        {"id": 2, "title": "GPU memory in use", "type": "timeseries",
+         "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+         "datasource": {"type": "prometheus", "uid": "$datasource"},
+         "fieldConfig": {"defaults": {"unit": "mbytes", "min": 0}, "overrides": []},
+         "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_FB_USED", "legendFormat": "{{Hostname}}"}]},
+        {"id": 3, "title": "GPU temperature", "type": "timeseries",
+         "gridPos": {"x": 0, "y": 8, "w": 8, "h": 8},
+         "datasource": {"type": "prometheus", "uid": "$datasource"},
+         "fieldConfig": {"defaults": {"unit": "celsius"}, "overrides": []},
+         "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_GPU_TEMP", "legendFormat": "{{Hostname}}"}]},
+        {"id": 4, "title": "GPU power", "type": "timeseries",
+         "gridPos": {"x": 8, "y": 8, "w": 8, "h": 8},
+         "datasource": {"type": "prometheus", "uid": "$datasource"},
+         "fieldConfig": {"defaults": {"unit": "watt", "min": 0}, "overrides": []},
+         "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_POWER_USAGE", "legendFormat": "{{Hostname}}"}]},
+        {"id": 5, "title": "Latest XID error code", "type": "stat",
+         "description": "A nonzero value needs investigation. This is an error code, not a count of failures.",
+         "gridPos": {"x": 16, "y": 8, "w": 8, "h": 8},
+         "datasource": {"type": "prometheus", "uid": "$datasource"},
+         "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_XID_ERRORS", "legendFormat": "{{Hostname}}", "instant": true}]}
+      ]
+    }

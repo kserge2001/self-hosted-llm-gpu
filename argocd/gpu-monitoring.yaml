@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: astra-gpu-monitoring
+  namespace: argocd
+spec:
+  project: astra
+  sources:
+    - repoURL: https://nvidia.github.io/dcgm-exporter/helm-charts
+      chart: dcgm-exporter
+      targetRevision: 4.8.4
+      helm:
+        releaseName: dcgm-exporter
+        valueFiles:
+          - $values/k8s/dcgm-values.yaml
+    - repoURL: ${GITOPS_REPOSITORY_URL}
+      targetRevision: ${GITOPS_REVISION}
+      ref: values
+    - repoURL: ${GITOPS_REPOSITORY_URL}
+      targetRevision: ${GITOPS_REVISION}
+      path: k8s
+      directory:
+        include: gpu-dashboard.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gpu-system
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
