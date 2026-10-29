@@ -9,7 +9,8 @@ Updated October 29, 2026. Use the latest commit on e2e/astra for independent tes
 - The private operator connected to EKS. The NVIDIA device plugin advertised one GPU on each GPU worker. A Kubernetes diagnostic job on the first GPU successfully ran nvidia-smi and reported an NVIDIA L40S with no uncorrectable ECC errors.
 - Cert-manager issued the load-balancer controller's internal certificates. Argo CD, the load-balancer controller and External Secrets Operator deployed successfully.
 - External Secrets Operator synchronized the model API key from AWS Secrets Manager with a role limited to that one secret. Its value was not placed in Git or printed.
-- The Argo CD Gateway API route was accepted, the ALB target became healthy, ExternalDNS created the records, and the public hostname opened Cognito sign-in in a browser with verified HTTPS. Successful sign-in and application administration are separate checks still pending.
+- The Argo CD Gateway API route was accepted, the ALB target became healthy, and ExternalDNS created the records. The updated route opens Argo CD's own login directly over HTTPS, without Cognito. A fresh request returned HTTP 200 and the browser displayed the native login. Signing in to administer Argo CD is still pending.
+- The EBS CSI add-on became Active. Argo CD deployed Grafana, Prometheus and Alertmanager; all their pods became Ready and the Grafana and Prometheus volumes became Bound. The Grafana route was accepted and Route 53 answered its DNS record. Public resolver availability and browser sign-in are still being checked.
 
 These results do not prove model inference, application behavior or recovery.
 
@@ -20,6 +21,8 @@ These results do not prove model inference, application behavior or recovery.
 - A GPU type listed in an Availability Zone can still be unavailable when you launch it. One zone rejected the requested size for insufficient capacity. A reviewed larger instance with the same GPU launched successfully through gpu_instance_type_overrides. Do not treat a quota increase as a fix for physical capacity.
 - With ACM, set the certificate in LoadBalancerConfiguration. An empty Gateway tls block with mode Terminate fails Gateway API validation; it must not be generated.
 - Use Gateway API resources throughout routing and cleanup. Do not delete the complete generated routes bundle during route cleanup, because it contains application namespaces.
+- Create the EBS CSI add-on and its role in Terraform before syncing monitoring. Synchronize the Grafana administrator secret through External Secrets Operator before the chart starts.
+- The live SageMaker API rejected an explicit MLflow version of 3.0.0. Omitting the requested version started creation and AWS reported version 3.0.0. The template exposes an optional version input and records the resolved server version; server readiness and client compatibility remain pending.
 
 The tested device-plugin installation is:
 
@@ -34,10 +37,10 @@ helm upgrade --install nvidia-device-plugin nvdp/nvidia-device-plugin \
 
 - Two-zone model inference and failover.
 - Completed Cognito sign-in and browser checks for every application.
-- The consolidated bootstrap script and new Argo CD storage/monitoring definitions. Their individual controller installation steps were exercised live; the full student path still needs its own run.
+- The consolidated bootstrap script from a fresh student account. Its individual controller installation steps and the Argo CD storage/monitoring definitions were exercised live; the full student path still needs its own run.
 - All remaining application secret values and their synchronization.
 - A complete provisioned SageMaker scanning, evaluation and promotion pipeline. The repository currently includes the trigger and supporting scripts, not the complete pipeline definition.
-- Managed MLflow server and launcher deployment, prompt and trace workflows in that live server.
+- Managed MLflow server creation is in progress. Launcher deployment and prompt and trace workflows in that live server are not verified.
 - The complete container build and Argo CD deployment configuration for the model, gateway and assistants.
 - Authenticated model responses, assistant tool calls, shared gateway limits, monitoring, alerts and recovery exercises.
 - Final cleanup of this test run.

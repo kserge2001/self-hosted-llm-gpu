@@ -75,11 +75,11 @@ class DomainTests(unittest.TestCase):
         self.assertEqual(rule["matches"][0]["path"], {"type": "PathPrefix", "value": "/v1"})
         self.assertEqual(rule["backendRefs"], [{"name": "litellm", "port": 4000}])
 
-    def test_every_browser_route_requires_cognito(self):
+    def test_shared_signin_routes_require_cognito(self):
         resources = domains.build_routes(fixture(), list(domains.catalog()))
         authentication = {r["metadata"]["name"]: r for r in resources if r["kind"] == "ListenerRuleConfiguration"}
         for route in resources:
-            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] == "astra-inference":
+            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] in ("astra-inference", "astra-argocd"):
                 continue
             reference = route["spec"]["rules"][0]["filters"][0]["extensionRef"]["name"]
             protection = authentication[reference]
@@ -197,9 +197,14 @@ class DomainTests(unittest.TestCase):
             command.assert_not_called()
 
     def test_argocd_keeps_https_backend(self):
-        resources = domains.build_routes(fixture(), ["argocd"])
+        config = fixture()
+        config["browser_auth"] = None
+        resources = domains.build_routes(config, ["argocd"])
         target = next(r for r in resources if r["kind"] == "TargetGroupConfiguration")
         self.assertEqual(target["spec"]["defaultConfiguration"]["protocol"], "HTTPS")
+        route = next(r for r in resources if r["kind"] == "HTTPRoute")
+        self.assertNotIn("filters", route["spec"]["rules"][0])
+        self.assertFalse(any(r["kind"] == "ListenerRuleConfiguration" for r in resources))
 
     def test_gateway_requires_https_allowlist_and_namespace_opt_in(self):
         config = fixture()

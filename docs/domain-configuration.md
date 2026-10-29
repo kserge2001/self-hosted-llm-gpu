@@ -22,7 +22,9 @@ For your implementation, replace the domain with your own. The resulting address
 
 Set public_client_cidrs to your approved public egress addresses. Terraform also includes the platform's NAT addresses for applications calling from private subnets. Set acm_certificate_arn to use a particular existing certificate; otherwise Terraform finds the issued wildcard. The certificate stays in ACM. This ALB listener does not need cert-manager.
 
-Terraform creates a Cognito user pool, a client and a sign-in domain. It derives all six browser callback URLs from the service names. Public self-registration is disabled. Create approved users through Cognito administration; do not put their passwords in Terraform or Git. Cognito protects the browser entry points. Application permissions inside Argo CD, Grafana and LiteLLM still apply. The model API uses its application key.
+Argo CD opens its own login directly over HTTPS. It does not redirect through Cognito.
+
+Terraform creates a Cognito user pool, a client and a sign-in domain for the other five browser entry points. Public self-registration is disabled. Create approved users through Cognito administration; do not put their passwords in Terraform or Git. Application permissions inside Grafana and LiteLLM still apply. The model API uses its application key.
 
 MLflow opens through the configured mlflow hostname, then redirects the authorized browser to SageMaker's managed UI. The browser address changes after that redirect.
 

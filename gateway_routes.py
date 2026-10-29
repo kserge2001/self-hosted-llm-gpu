@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent
 
 
 def browser_authentication(config, service, namespace):
-    """Cognito or OIDC protects browser routes; inference uses application keys."""
+    """Protect dashboards that use the shared browser identity provider."""
     auth = config["browser_auth"]
     parameters = auth["parameters"]
     settings = {
@@ -82,7 +82,8 @@ def build_resources(config, services, catalog):
             "matches": [{"path": {"type": "PathPrefix", "value": target["path"]}}],
             "backendRefs": [{"name": target["service"], "port": target["port"]}],
         }
-        if service != "inference":
+        # Argo CD handles its own login. Model requests use application keys.
+        if service not in ("inference", "argocd"):
             authentication = browser_authentication(config, service, namespace)
             resources.append(authentication)
             rule["filters"] = [{

@@ -24,7 +24,7 @@ The rendering command creates a new file. If you need to change it, review the e
 
 Open Argo CD. The astra-storage application manages the encrypted gp3 StorageClass. It synchronizes automatically, but automatic pruning is disabled to avoid deleting storage configuration accidentally.
 
-Before syncing astra-monitoring, install the EBS CSI driver and verify its AWS role, synchronize the grafana-admin secret, and wait for astra-storage to be Healthy and Synced. These dependencies are required; a StorageClass alone cannot create volumes. The initial monitoring sync is manual so you can confirm these prerequisites.
+Terraform installs the EBS CSI driver with its own AWS role. Before syncing astra-monitoring, verify that add-on is Active, synchronize the grafana-admin secret, and wait for astra-storage to be Healthy and Synced. These dependencies are required; a StorageClass alone cannot create volumes. The initial monitoring sync is manual so you can confirm these prerequisites.
 
 Open astra-monitoring, inspect the proposed resources and select Sync. Its pinned Prometheus chart reads k8s/monitoring-values.yaml from your repository. Check PVCs are Bound and the application becomes Healthy and Synced. Then publish the Grafana route with configure_domains.py and sign in through its configured hostname.
 
