@@ -16,6 +16,8 @@ Use the focused guides for [application onboarding](docs/application-onboarding.
 
 For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring, the MLflow launcher and LiteLLM; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.
 
+The live-tested [model intake and scanning steps](docs/model-intake-and-scanning.md) now upload verified files into quarantine and check GuardDuty events for their exact S3 versions. The pinned runtime failed its vulnerability check and remains unapproved; see the validation status before deployment.
+
 ## A. See the foundation
 
 ![AWS foundation](docs/aws-foundation.png)

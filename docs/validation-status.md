@@ -10,7 +10,14 @@ Updated October 29, 2026. Use the latest commit on e2e/astra for independent tes
 - Cert-manager issued the load-balancer controller's internal certificates. Argo CD, the load-balancer controller and External Secrets Operator deployed successfully.
 - External Secrets Operator synchronized the model API key from AWS Secrets Manager with a role limited to that one secret. Its value was not placed in Git or printed.
 - The Argo CD Gateway API route was accepted, the ALB target became healthy, and ExternalDNS created the records. The updated route opens Argo CD's own login directly over HTTPS, without Cognito. A fresh request returned HTTP 200 and the browser displayed the native login. Signing in to administer Argo CD is still pending.
-- The EBS CSI add-on became Active. Argo CD deployed Grafana, Prometheus and Alertmanager; all their pods became Ready and the Grafana and Prometheus volumes became Bound. Grafana DNS, HTTPS and administrator sign-in passed. Its updated route sends a fresh unauthenticated request directly to Grafana's own /login page, without Cognito. GPU dashboards still need the DCGM exporter and a live model workload.
+- The EBS CSI add-on became Active. Argo CD deployed Grafana, Prometheus and Alertmanager; all their pods became Ready and the Grafana and Prometheus volumes became Bound. Grafana DNS, HTTPS and administrator sign-in passed. Its route sends an unauthenticated request directly to Grafana's own /login page, without Cognito. DCGM exporter is running on both GPU workers, and Prometheus returned a separate utilization series for each NVIDIA L40S. Model workload measurements are still pending.
+- LiteLLM's initializer completed, External Secrets synchronized its configuration, and both gateway replicas became Ready in separate zones. Native browser login passed without Cognito. The public model API rejected a request without a key with HTTP 401. Argo CD reports the corrected gateway deployment Healthy and Synced.
+- The managed MLflow server is Created and Active. Its launcher reached the managed UI after sign-in. A live API test created a run, metric and artifact and read the artifact back. Two prompt versions were visible in the browser. These were connectivity tests, not model evaluations.
+- The pinned Qwen candidate was downloaded and its publisher hashes verified. The intake Job completed and wrote a versioned quarantine manifest. The scan gate found clean GuardDuty events for all 76 exact artifact versions. The model is still unapproved and has not been served.
+
+## Current release blocker
+
+Trivy 0.76.1 scanned the pinned vLLM 0.32.0 image and reported 392 HIGH and 17 CRITICAL findings, representing 397 distinct vulnerability IDs. The release check failed. Of the findings, 386 refer to the linux-libc-dev header package and need applicability review; they are not evidence that a kernel shipped inside the container is running. Other findings include Python and operating-system dependencies with available fixes. Do not treat the image as approved, hide the results or bypass the check. A repaired image needs a new digest, scan and compatibility test.
 
 These results do not prove model inference, application behavior or recovery.
 
@@ -22,7 +29,10 @@ These results do not prove model inference, application behavior or recovery.
 - With ACM, set the certificate in LoadBalancerConfiguration. An empty Gateway tls block with mode Terminate fails Gateway API validation; it must not be generated.
 - Use Gateway API resources throughout routing and cleanup. Do not delete the complete generated routes bundle during route cleanup, because it contains application namespaces.
 - Create the EBS CSI add-on and its role in Terraform before syncing monitoring. Synchronize the Grafana administrator secret through External Secrets Operator before the chart starts.
-- The live SageMaker API rejected an explicit MLflow version of 3.0.0. Omitting the requested version started creation and AWS reported version 3.0.0. The template exposes an optional version input and records the resolved server version; server readiness and client compatibility remain pending.
+- The live SageMaker API rejected an explicit MLflow version of 3.0.0. Omitting the requested version created the server, and AWS reported version 3.0.0. The template exposes an optional version input and records the resolved server version. The pinned MLflow client and SageMaker plugin completed the live connectivity check.
+- Publishing a LiteLLM route previously changed its Deployment and triggered an extra pod that could not fit on the CPU workers. Routing now leaves that Deployment to Argo CD. Gateway rolling updates replace one replica at a time and preserve one available replica. The corrected live rollout completed.
+- Route publication now labels existing application namespaces without replacing their Argo CD annotations.
+- The Python dependency lock originally included an unconditional Windows package. The universal lock preserves platform markers, and GitHub's Linux checks passed after the correction.
 
 The tested device-plugin installation is:
 
@@ -40,8 +50,8 @@ helm upgrade --install nvidia-device-plugin nvdp/nvidia-device-plugin \
 - The consolidated bootstrap script from a fresh student account. Its individual controller installation steps and the Argo CD storage/monitoring definitions were exercised live; the full student path still needs its own run.
 - All remaining application secret values and their synchronization.
 - A complete provisioned SageMaker scanning, evaluation and promotion pipeline. The repository currently includes the trigger and supporting scripts, not the complete pipeline definition.
-- Managed MLflow server creation is in progress. Launcher deployment and prompt and trace workflows in that live server are not verified.
-- The complete container build and Argo CD deployment configuration for the model, gateway and assistants.
+- Full assistant traces, tool spans, feedback and release lineage in MLflow remain unverified. Removing Cognito from the managed MLflow browser entry point requires an agreed replacement access flow.
+- The complete container build and Argo CD deployment configuration for the model and assistants.
 - Authenticated model responses, assistant tool calls, shared gateway limits, monitoring, alerts and recovery exercises.
 - Final cleanup of this test run.
 

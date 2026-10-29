@@ -1,0 +1,7 @@
+FROM python:3.13-slim-bookworm@sha256:281d39ff02e3b389401586134ff9e6572954687822a58055ec07a60ded4e0b7f
+WORKDIR /app
+COPY apps/bootstrap-requirements.lock /app/requirements.lock
+RUN pip install --no-cache-dir --require-hashes -r /app/requirements.lock
+COPY quarantine_intake.py artifact_loader.py model_intake.py /app/
+USER 10001:10001
+ENTRYPOINT ["python", "/app/quarantine_intake.py"]
