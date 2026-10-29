@@ -14,7 +14,7 @@ Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute pe
 
 Use the focused guides for [application onboarding](docs/application-onboarding.md), [platform verification](docs/acceptance-checks.md), [troubleshooting and recovery](docs/troubleshooting-recovery.md), and [cleanup](docs/cleanup.md).
 
-For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains the storage and monitoring Application definitions; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.
+For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring, the MLflow launcher and LiteLLM; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.
 
 ## A. See the foundation
 

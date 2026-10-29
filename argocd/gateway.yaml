@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: astra-gateway
+  namespace: argocd
+spec:
+  project: astra
+  source:
+    repoURL: ${GITOPS_REPOSITORY_URL}
+    targetRevision: ${GITOPS_REVISION}
+    path: k8s/gateway
+    helm:
+      valuesObject:
+        bootstrapImage: ${GATEWAY_BOOTSTRAP_IMAGE}
+        bootstrapRoleArn: ${GATEWAY_BOOTSTRAP_ROLE_ARN}
+        secretReaderRoleArn: ${GATEWAY_SECRET_READER_ROLE_ARN}
+        gatewaySecretArn: ${GATEWAY_SECRET_ARN}
+        modelSecretArn: ${MODEL_SECRET_ARN}
+        postgresAdminSecretArn: ${POSTGRES_ADMIN_SECRET_ARN}
+        postgresHost: ${POSTGRES_HOST}
+        redisSecretArn: ${REDIS_SECRET_ARN}
+        redisHost: ${REDIS_HOST}
+        hostname: ${LITELLM_HOST}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gateway
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

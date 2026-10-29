@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gateway-bootstrap
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+    eks.amazonaws.com/role-arn: {{ required "bootstrapRoleArn is required" .Values.bootstrapRoleArn | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gateway-bootstrap
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      serviceAccountName: gateway-bootstrap
+      nodeSelector: {astra/tier: cpu}
+      restartPolicy: Never
+      containers:
+        - name: initialize
+          image: {{ required "bootstrapImage is required" .Values.bootstrapImage | quote }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 256Mi}
+          env:
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: GATEWAY_SECRET_ARN
+              value: {{ required "gatewaySecretArn is required" .Values.gatewaySecretArn | quote }}
+            - name: MODEL_SECRET_ARN
+              value: {{ required "modelSecretArn is required" .Values.modelSecretArn | quote }}
+            - name: POSTGRES_ADMIN_SECRET_ARN
+              value: {{ required "postgresAdminSecretArn is required" .Values.postgresAdminSecretArn | quote }}
+            - name: POSTGRES_HOST
+              value: {{ required "postgresHost is required" .Values.postgresHost | quote }}
+            - name: REDIS_SECRET_ARN
+              value: {{ required "redisSecretArn is required" .Values.redisSecretArn | quote }}
+            - name: REDIS_HOST
+              value: {{ required "redisHost is required" .Values.redisHost | quote }}
+            - name: LITELLM_HOST
+              value: {{ required "hostname is required" .Values.hostname | quote }}

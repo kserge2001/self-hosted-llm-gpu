@@ -51,10 +51,17 @@ resource "aws_iam_role" "mlflow_launcher" {
 resource "aws_iam_role_policy" "mlflow_launcher" {
   role = aws_iam_role.mlflow_launcher.id
   name = "open-one-tracking-server"
-  policy = jsonencode({ Version = "2012-10-17", Statement = [{
-    Effect   = "Allow", Action = ["sagemaker:CreatePresignedMlflowTrackingServerUrl", "sagemaker-mlflow:AccessUI"]
-    Resource = aws_sagemaker_mlflow_tracking_server.astra.arn
-  }] })
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    {
+      Effect = "Allow", Action = [
+        "sagemaker:CreatePresignedMlflowTrackingServerUrl",
+        "sagemaker-mlflow:Get*", "sagemaker-mlflow:Search*", "sagemaker-mlflow:List*"
+      ]
+      Resource = aws_sagemaker_mlflow_tracking_server.astra.arn
+    },
+    # AccessUI does not support resource-level permissions. Data reads above do.
+    { Effect = "Allow", Action = "sagemaker-mlflow:AccessUI", Resource = "*" }
+  ] })
 }
 
 output "mlflow" {

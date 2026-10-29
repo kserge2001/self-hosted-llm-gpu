@@ -1,0 +1,15 @@
+image: ghcr.io/berriai/litellm@sha256:37e2dafb088a7723beb998590682957386dfc83ffea1848486f8e0e5cfac0b06
+bootstrapImage: ""
+bootstrapRoleArn: ""
+secretReaderRoleArn: ""
+gatewaySecretArn: ""
+modelSecretArn: ""
+postgresAdminSecretArn: ""
+postgresHost: ""
+redisSecretArn: ""
+redisHost: ""
+hostname: ""
+replicas: 2
+# Internal accounting rates are separate from the AWS bill.
+inputCostPerToken: 0
+outputCostPerToken: 0

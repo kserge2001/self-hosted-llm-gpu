@@ -1,0 +1,6 @@
+apiVersion: v2
+name: astra-gateway
+description: LiteLLM with private managed stores and AWS secret synchronization
+type: application
+version: 0.1.0
+appVersion: "1.106.6"

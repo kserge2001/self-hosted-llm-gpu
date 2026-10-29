@@ -47,4 +47,21 @@ kubectl apply -f k8s/generated/argocd-mlflow.yaml
 
 Open astra-mlflow in Argo CD and sync it. Wait for both launcher pods and the managed server to be ready. Then publish the MLflow route with configure_domains.py. Verify the browser sign-in and redirect, and confirm a request made directly to the launcher without a signed ALB identity is rejected.
 
-Model, gateway and assistant deployment applications still need their complete release configuration before they can be registered and verified.
+## F. Deploy LiteLLM
+
+Build apps/Dockerfile.gateway-bootstrap and push it to ECR. This small initialization job creates the database login and stores generated application credentials in Secrets Manager. A retry keeps the same credentials. External Secrets Operator then copies the gateway configuration into its Kubernetes Secret.
+
+The gateway chart is k8s/gateway. It includes two LiteLLM replicas, their ClusterIP Service, the initialization job and secret synchronization. The database connections verify the AWS RDS certificate. The checked-in public CA bundle comes from AWS and its origin and fingerprint are recorded in files/README.md.
+
+Use argocd/gateway.yaml with the Terraform outputs: gateway_bootstrap_role, application_secrets, postgres_host, postgres_admin_secret, redis_host and redis_secret. Set GATEWAY_BOOTSTRAP_IMAGE to the initializer's ECR digest and LITELLM_HOST to the configured UI hostname. Reuse GITOPS_REPOSITORY_URL and GITOPS_REVISION from section B.
+
+```bash
+python render_manifest.py argocd/gateway.yaml k8s/generated/argocd-gateway.yaml
+kubectl apply -f k8s/generated/argocd-gateway.yaml
+```
+
+Sync astra-gateway in Argo CD. The initialization job runs first. Wait for the secret to synchronize and both gateway pods to be Ready before publishing the inference and LiteLLM routes. The completed Job stays visible as the initialization record. It contains no credentials in its manifest or logs.
+
+The UI and gateway health can be checked before model deployment. An actual model response requires the approved model release and healthy vLLM pods. That end-to-end check remains incomplete until it is performed.
+
+Model and assistant deployment applications still need their complete release configuration before they can be registered and verified.

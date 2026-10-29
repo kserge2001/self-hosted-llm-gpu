@@ -10,6 +10,7 @@ foundation-outputs.json
 astra-candidate.json
 .env
 *.pem
+!k8s/gateway/files/rds-ca.pem
 *.key
 evidence/
 k8s/generated/
