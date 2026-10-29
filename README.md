@@ -4,11 +4,13 @@ CareCart's AI Platform Engineering team is researching, designing and building a
 
 This starter provides the AWS foundation, model intake checker and the PR-to-SageMaker trigger. Follow the [lab in Kodelumi](https://kodelumi.com/w/49_OMkQYNp9zuC57) for the full build.
 
-The e2e/astra branch is the development test branch. Live AWS validation is in progress; the presence of a configuration file does not mean its deployment has passed.
+The e2e/astra branch contains the current code for independent testing. Import that branch's latest changes, not an older main snapshot. Live AWS validation is in progress. Read [what has been tested and what is still missing](docs/validation-status.md) before provisioning; this is not yet a complete, verified end-to-end release.
 
 Start by [importing the starter into your own GitHub account](docs/repository-setup.md). Your pull requests, GitHub Actions, AWS OIDC trust and Argo CD deployments must use your imported repository. After the import finishes, get a local working copy of your repository and create the Python environment using that guide.
 
 Python implementations are supplied as repository files. Kubernetes manifests and Helm values are under k8s/.
+
+Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute per application, backed by an AWS Application Load Balancer. Browser routes require Cognito sign-in; the inference route uses application keys. Gateway API routing is locally tested and awaits live HTTPS and sign-in verification.
 
 Use the focused guides for [application onboarding](docs/application-onboarding.md), [platform verification](docs/acceptance-checks.md), [troubleshooting and recovery](docs/troubleshooting-recovery.md), and [cleanup](docs/cleanup.md).
 

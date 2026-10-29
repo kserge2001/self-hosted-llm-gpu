@@ -28,14 +28,29 @@ MLflow opens through the configured mlflow hostname, then redirects the authoriz
 
 ## B. Generate and apply the routes
 
-Apply the AWS foundation first. Install AWS Load Balancer Controller and deploy the backend Services before publishing their routes. Run from a workstation with access to the private EKS API.
+Apply the AWS foundation first. Install the standard Gateway API v1.6.0 CRDs, the AWS Load Balancer Controller v3.6.2 Gateway CRDs and the controller. Its service account needs the controller's reviewed AWS permissions through IRSA. Deploy each backend Service before publishing its route. Run from a workstation with access to the private EKS API.
+
+Create the local Kubernetes connection before using kubectl:
+
+```bash
+CLUSTER_NAME=$(terraform -chdir=infra output -raw cluster)
+OPERATOR_ROLE_ARN=$(terraform -chdir=infra output -raw operator_role_arn)
+export KUBECONFIG="$PWD/astra.kubeconfig"
+aws eks update-kubeconfig --region us-east-1 --name "$CLUSTER_NAME" \
+  --role-arn "$OPERATOR_ROLE_ARN" --alias "$CLUSTER_NAME" \
+  --kubeconfig "$KUBECONFIG"
+export CLUSTER_CONTEXT="$CLUSTER_NAME"
+kubectl config current-context
+```
+
+Your AWS identity must be allowed to assume the operator role. If you already use that role, omit --role-arn. Updating kubeconfig creates the connection settings; your workstation still needs a network route to the private EKS endpoint.
 
 ```bash
 source .venv/bin/activate
 python configure_domains.py
 ```
 
-This reads the applied Terraform output directly. It creates the ExternalDNS manifest, HTTPS Ingress rules, Argo CD and Grafana domain values, and endpoints.json under k8s/generated/edge. No hostname needs to be copied into YAML. Use the generated domain values with the corresponding Helm releases. Keep these settings in the environment's reviewed GitOps configuration so Argo CD preserves them.
+This reads the applied Terraform output directly. It creates the ExternalDNS manifest, one HTTPS Gateway, HTTPRoutes, browser authentication settings, Argo CD and Grafana domain values, and endpoints.json under k8s/generated/edge. No hostname needs to be copied into YAML. Use the generated domain values with the corresponding Helm releases. Keep these settings in the environment's reviewed GitOps configuration so Argo CD preserves them.
 
 After the selected services are deployed, apply the routes. Use the context created for this stack.
 
@@ -43,7 +58,7 @@ After the selected services are deployed, apply the routes. Use the context crea
 python configure_domains.py --apply --context "$CLUSTER_CONTEXT"
 ```
 
-The script checks the cluster endpoint, certificate coverage, existing DNS ownership, backend Service ports and browser sign-in configuration before changing Kubernetes. It installs ExternalDNS and applies the routes. AWS Load Balancer Controller creates the HTTPS listener; ExternalDNS creates the DNS records. All routes share one ALB. Only the platform team should be able to create or change Ingress rules in these namespaces.
+The script checks the cluster endpoint, Gateway API definitions, certificate coverage, existing DNS ownership, backend Service ports and browser sign-in configuration before changing Kubernetes. It installs ExternalDNS and applies the routes. AWS Load Balancer Controller creates the HTTPS listener; ExternalDNS creates the DNS records. All routes share one ALB. Only the platform team should be able to change the Gateway, HTTPRoutes, authentication settings or namespace labels that allow routes to attach.
 
 During the gateway step, publish just the ready API service:
 
@@ -57,13 +72,12 @@ Selecting services only applies those routes. It does not remove previously publ
 
 ```bash
 terraform -chdir=infra output -json domain_configuration
-kubectl --context "$CLUSTER_CONTEXT" get ingress --all-namespaces
+kubectl --context "$CLUSTER_CONTEXT" -n platform-system get gateway astra-public
+kubectl --context "$CLUSTER_CONTEXT" get httproute --all-namespaces
 kubectl --context "$CLUSTER_CONTEXT" -n external-dns logs deployment/external-dns --tail=50
-export ASTRA_HOST="$(python configure_domains.py --host inference)"
-python verify_endpoint.py --expect allowed
 ```
 
-Enter the application key using the hidden prompt in Application Onboarding before the endpoint test. Expect a real answer over verified HTTPS. Check that every published hostname has the expected ALB address in Route 53 and no ExternalDNS ownership error.
+Run the short OpenAI SDK example in Application Onboarding with your application key. Expect a real answer over verified HTTPS. Check that the Gateway is Programmed, the HTTPRoutes are Accepted with ResolvedRefs, and each published hostname has the expected ALB address in Route 53 with no ExternalDNS ownership error.
 
 Open each browser hostname in a private window. Expect Cognito sign-in before application access. After approved sign-in, verify the intended application; for MLflow, verify the redirect to the managed UI. A generated YAML file, DNS record or HTTP redirect alone does not prove the application works.
 
@@ -71,12 +85,15 @@ If DNS is missing, inspect ExternalDNS logs and its IAM role. If a target is unh
 
 ## D. Change names or clean up
 
-Before changing an existing domain or label, remove its old Ingress while the old Terraform DNS permissions still exist. Wait for ExternalDNS to remove that stack's address and ownership records. Then change terraform.tfvars, apply Terraform, regenerate and apply the routes. This avoids leaving old names behind after the IAM policy moves to the new names.
+Before changing an existing domain or label, remove its old HTTPRoute while the old Terraform DNS permissions still exist. Wait for ExternalDNS to remove that stack's address and ownership records. Then change terraform.tfvars, apply Terraform, regenerate and apply the routes. This avoids leaving old names behind after the IAM policy moves to the new names.
 
-During final cleanup, delete the generated Ingress rules first and wait for their DNS records and ALB to disappear. Keep ExternalDNS running until that completes, then remove it and destroy the foundation. Retain the shared hosted zone and existing wildcard certificate.
+During final cleanup, remove this stack's HTTPRoutes first and wait for ExternalDNS to remove their address and ownership records. Then delete the Gateway and wait for the ALB and target groups to disappear. Keep the controllers running until that completes. Retain the shared hosted zone and existing wildcard certificate.
 
 ```bash
-kubectl --context "$CLUSTER_CONTEXT" delete -f k8s/generated/edge/ingresses.yaml
+kubectl --context "$CLUSTER_CONTEXT" get httproute -A -l "astra/platform=$CLUSTER_NAME"
+kubectl --context "$CLUSTER_CONTEXT" delete httproute -A -l "astra/platform=$CLUSTER_NAME"
+# Check Route 53 before deleting the Gateway.
+kubectl --context "$CLUSTER_CONTEXT" -n platform-system delete gateway astra-public
 ```
 
-If routes were published in separate stages, the current file may contain only the last stage. List the Ingress resources with the astra/platform label for this cluster and remove the remaining routes before stopping ExternalDNS.
+The label selects this stack's routes even if they were published in separate stages. Do not delete the whole routes.yaml bundle: it also contains application namespaces. Remove the remaining controller configuration during final teardown after workloads and storage have been handled.

@@ -1,0 +1,8 @@
+# These node labels are created by Terraform, so Node Feature Discovery is not required.
+nodeSelector:
+  astra/tier: gpu
+affinity: null
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule

@@ -46,57 +46,47 @@ class DomainTests(unittest.TestCase):
         for domain in ("example.com", "platform.example.org"):
             with self.subTest(domain=domain), tempfile.TemporaryDirectory() as temp:
                 config = fixture(domain)
-                routes = domains.render_bundle(config, list(domains.catalog()), temp)
-                self.assertEqual(
-                    {r["spec"]["rules"][0]["host"] for r in routes},
-                    set(config["hosts"].values()),
-                )
-                for route in routes:
-                    self.assertEqual(
-                        route["metadata"]["annotations"][domains.DNS + "hostname"],
-                        route["spec"]["rules"][0]["host"],
-                    )
-                for filename in (
-                    "argocd-domain-values.yaml",
-                    "monitoring-domain-values.yaml",
-                    "endpoints.json",
-                ):
+                resources = domains.render_bundle(config, list(domains.catalog()), temp)
+                routes = [r for r in resources if r["kind"] == "HTTPRoute"]
+                self.assertEqual({r["spec"]["hostnames"][0] for r in routes}, set(config["hosts"].values()))
+                for filename in ("argocd-domain-values.yaml", "monitoring-domain-values.yaml", "endpoints.json"):
                     self.assertIn(domain, (Path(temp) / filename).read_text())
-                controller = list(
-                    yaml.safe_load_all((Path(temp) / "external-dns.yaml").read_text())
-                )[-1]
+                controller = list(yaml.safe_load_all((Path(temp) / "external-dns.yaml").read_text()))[-1]
                 args = controller["spec"]["template"]["spec"]["containers"][0]["args"]
                 self.assertIn("--domain-filter=" + domain, args)
                 self.assertIn("--zone-id-filter=Z123456", args)
+                self.assertIn("--source=gateway-httproute", args)
 
     def test_custom_label_propagates_without_changing_other_services(self):
         config = fixture()
         config["hosts"]["mlflow"] = "models.example.com"
-        routes = domains.build_ingresses(config, ["mlflow", "argocd"])
-        self.assertEqual(
-            {r["spec"]["rules"][0]["host"] for r in routes},
-            {"models.example.com", "argocd.example.com"},
-        )
+        resources = domains.build_routes(config, ["mlflow", "argocd"])
+        routes = [r for r in resources if r["kind"] == "HTTPRoute"]
+        self.assertEqual({r["spec"]["hostnames"][0] for r in routes}, {"models.example.com", "argocd.example.com"})
 
     def test_inference_uses_application_auth_and_never_exposes_admin_root(self):
         config = fixture()
         config["browser_auth"] = None
-        route = domains.build_ingresses(config, ["inference"])[0]
-        self.assertNotIn(domains.ALB + "auth-type", route["metadata"]["annotations"])
-        self.assertEqual(route["spec"]["rules"][0]["http"]["paths"][0]["path"], "/v1")
-        self.assertEqual(
-            route["spec"]["rules"][0]["http"]["paths"][0]["backend"]["service"]["name"],
-            "litellm",
-        )
+        resources = domains.build_routes(config, ["inference"])
+        route = next(r for r in resources if r["kind"] == "HTTPRoute")
+        self.assertFalse(any(r["kind"] == "ListenerRuleConfiguration" for r in resources))
+        rule = route["spec"]["rules"][0]
+        self.assertNotIn("filters", rule)
+        self.assertEqual(rule["matches"][0]["path"], {"type": "PathPrefix", "value": "/v1"})
+        self.assertEqual(rule["backendRefs"], [{"name": "litellm", "port": 4000}])
 
     def test_every_browser_route_requires_cognito(self):
-        routes = domains.build_ingresses(fixture(), list(domains.catalog()))
-        for route in routes:
-            if route["metadata"]["name"] != "astra-inference":
-                self.assertEqual(
-                    route["metadata"]["annotations"][domains.ALB + "auth-type"],
-                    "cognito",
-                )
+        resources = domains.build_routes(fixture(), list(domains.catalog()))
+        authentication = {r["metadata"]["name"]: r for r in resources if r["kind"] == "ListenerRuleConfiguration"}
+        for route in resources:
+            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] == "astra-inference":
+                continue
+            reference = route["spec"]["rules"][0]["filters"][0]["extensionRef"]["name"]
+            protection = authentication[reference]
+            self.assertEqual(protection["metadata"]["namespace"], route["metadata"]["namespace"])
+            action = protection["spec"]["actions"][0]
+            self.assertEqual(action["type"], "authenticate-cognito")
+            self.assertEqual(action["authenticateCognitoConfig"]["onUnauthenticatedRequest"], "authenticate")
 
     def test_missing_browser_auth_stops_before_creating_files(self):
         config = fixture()
@@ -128,7 +118,7 @@ class DomainTests(unittest.TestCase):
 
     def test_no_public_vllm_route(self):
         with self.assertRaises(ValueError):
-            domains.build_ingresses(fixture(), ["vllm"])
+            domains.build_routes(fixture(), ["vllm"])
 
     def test_certificate_must_be_issued_and_cover_hosts(self):
         config = fixture()
@@ -207,10 +197,22 @@ class DomainTests(unittest.TestCase):
             command.assert_not_called()
 
     def test_argocd_keeps_https_backend(self):
-        route = domains.build_ingresses(fixture(), ["argocd"])[0]
-        self.assertEqual(
-            route["metadata"]["annotations"][domains.ALB + "backend-protocol"], "HTTPS"
-        )
+        resources = domains.build_routes(fixture(), ["argocd"])
+        target = next(r for r in resources if r["kind"] == "TargetGroupConfiguration")
+        self.assertEqual(target["spec"]["defaultConfiguration"]["protocol"], "HTTPS")
+
+    def test_gateway_requires_https_allowlist_and_namespace_opt_in(self):
+        config = fixture()
+        resources = domains.build_routes(config, list(domains.catalog()))
+        gateway = next(r for r in resources if r["kind"] == "Gateway")
+        listener = gateway["spec"]["listeners"][0]
+        self.assertEqual(listener["port"], 443)
+        self.assertEqual(listener["protocol"], "HTTPS")
+        self.assertEqual(listener["allowedRoutes"]["namespaces"]["from"], "Selector")
+        load_balancer = next(r for r in resources if r["kind"] == "LoadBalancerConfiguration")
+        self.assertEqual(load_balancer["spec"]["sourceRanges"], config["allowed_cidrs"])
+        self.assertEqual(load_balancer["spec"]["listenerConfigurations"][0]["defaultCertificate"], config["acm_certificate_arn"])
+        self.assertFalse(any(r["kind"] == "Ingress" for r in resources))
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ Applications call Astra through LiteLLM's HTTPS endpoint. The model name is **as
 - **Base URL:** https://YOUR_ASTRA_HOST/v1. Replace YOUR_ASTRA_HOST with your deployed DNS hostname.
 - **Model:** astra.
 - **Access:** a separate application key issued by the platform team. Set its model permission, budget and request limits. Supply it through the approved secret store.
-- **Network:** add the developer's current public IP, or the application's approved egress address, to the Ingress allowlist.
+- **Network:** add the developer's current public IP, or the application's approved egress address, to public_client_cidrs in Terraform. The Gateway's ALB uses that allowlist.
 - **Limits:** provide the verified input/output token limits, request-rate limit and timeout. Publish measured limits after validation.
 - **Support:** provide the service owner and incident contact.
 

@@ -14,3 +14,4 @@ astra-candidate.json
 evidence/
 k8s/generated/
 domain-configuration.json
+*.kubeconfig

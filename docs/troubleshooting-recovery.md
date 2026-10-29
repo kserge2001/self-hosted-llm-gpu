@@ -7,14 +7,15 @@ Choose one exercise at a time in your test environment. Record a successful requ
 Follow this order when a request fails: client configuration, DNS and TLS, ALB target health, LiteLLM authentication, database and Redis connectivity, vLLM readiness, then the model response.
 
 ```bash
-kubectl -n gateway get ingress astra
+kubectl -n platform-system get gateway astra-public
+kubectl -n gateway get httproute astra-inference
 kubectl -n gateway get pods -l app=litellm -o wide
 kubectl -n gateway get endpointslices -l kubernetes.io/service-name=litellm
 kubectl -n llm get pods -l app=vllm -o wide
 kubectl -n llm get endpointslices -l kubernetes.io/service-name=vllm
 ```
 
-**Expected result:** the Ingress has an address, both Services have ready endpoints and both serving tiers have ready replicas. If a pod is not ready, inspect that exact pod with kubectl describe pod and its relevant container log. Save only the necessary redacted lines.
+**Expected result:** the Gateway has an address and is Programmed, the HTTPRoute is Accepted with ResolvedRefs, both Services have ready endpoints and both serving tiers have ready replicas. If a pod is not ready, inspect that exact pod with kubectl describe pod and its relevant container log. Save only the necessary redacted lines.
 
 ## Diagnose a rejected application key
 

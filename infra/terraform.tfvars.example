@@ -4,6 +4,8 @@ operator_role_arn = "arn:aws:iam::REPLACE_ACCOUNT_ID:role/REPLACE_OPERATOR_ROLE"
 operator_cidr     = "REPLACE_PRIVATE_OPERATOR_CIDR"
 gpu_instance_type = "REPLACE_WITH_REVIEWED_GPU_INSTANCE_TYPE"
 gpu_enabled       = true
+# Optional: use a reviewed equivalent GPU size if one zone has no capacity.
+# gpu_instance_type_overrides = { "us-east-1a" = "g6e.4xlarge" }
 domain_name         = "example.com"
 public_client_cidrs = ["203.0.113.10/32"] # Replace with your approved public egress IP.
 # Leave acm_certificate_arn unset to select an issued *.domain_name certificate.

@@ -1,211 +1,60 @@
 # Platform Verification
 
-## Prepare the verification record
+## Open the platform
 
-Run these checks after deploying the relevant components. Use your deployed names and the release record from the build. Keep an item unchecked until its expected result is observed. For each result, record the date, release ID, command or UI action, PASS or FAIL, and an evidence file or trace ID.
+Use the browser addresses created from your domain in AWS Foundation. Sign in with your approved dashboard account. Start this walkthrough after the gateway, assistants and monitoring have been deployed.
 
-Use the [starter repository](https://github.com/kserge2001/self-hosted-llm-gpu). Save permitted output locally under evidence; that directory is excluded from Git. Use synthetic requests and remove secrets from screenshots and logs.
+For the CareCart example, the addresses are:
 
-```bash
-mkdir -p evidence
-python -m unittest discover -s tests -v
-```
+- **LiteLLM:** https://litellm.afriqhome.com
+- **Argo CD:** https://argocd.afriqhome.com
+- **MLflow:** https://mlflow.afriqhome.com
+- **Grafana:** https://grafana.afriqhome.com
+- **Kubernetes assistant:** https://k8sassistant.afriqhome.com
+- **AWS assistant:** https://awsassistant.afriqhome.com
 
-**Expected result:** the local tests pass. This checks the scripts; it does not prove the deployed platform passes the checks below.
+Use your configured domain and subdomains for your own deployment. These are the intended addresses, not a statement that the services are currently available.
 
-## Verify the endpoint, replicas and access
+Keep these pages open as you follow one request through the platform. Save a screenshot or short note for each result. Keep keys and temporary sign-in links out of screenshots.
 
-- [ ] **1. Make an authenticated request from local code.** Set ASTRA_HOST and ASTRA_API_KEY as shown in Application Onboarding. Run:
+## Check the deployment in Argo CD
 
-```bash
-python verify_endpoint.py --expect allowed --key-env ASTRA_API_KEY
-kubectl -n gateway get ingress astra-inference
-kubectl -n gateway get ingress astra-inference -o jsonpath='{.metadata.annotations.alb\.ingress\.kubernetes\.io/scheme}'
-```
+Open each deployed Astra application. Check that it is **Synced** and **Healthy** and that its Git revision matches the change you approved. Expand the application resources and check that both vLLM pods and both LiteLLM pods are Ready.
 
-**Pass:** the script reports PASS and HTTP 200 after receiving an answer. The Ingress has an ALB address and its scheme is internet-facing. In the EC2 load-balancer console, verify HTTPS 443, the intended ACM certificate, healthy targets and an inbound allowlist restricted to approved source addresses. From a network outside that allowlist, the connection must fail. Save the response status and redacted listener/security-group evidence.
+In the AWS EKS console, open the cluster's Compute view. Confirm that its CPU and GPU workers are present in the two selected Availability Zones.
 
-- [ ] **2. Verify the two vLLM replicas and their release.**
+**Expected result:** the reviewed configuration is deployed and the required replicas are running. A green deployment alone does not prove the model can answer; check that next.
 
-```bash
-kubectl -n llm rollout status deployment/vllm --timeout=60s
-kubectl -n llm get pods -l app=vllm -o custom-columns='POD:.metadata.name,READY:.status.containerStatuses[*].ready,NODE:.spec.nodeName,RELEASE:.metadata.labels.release,IMAGE:.status.containerStatuses[*].imageID'
-kubectl get nodes -L topology.kubernetes.io/zone
-for pod in $(kubectl -n llm get pods -l app=vllm -o name); do
-  kubectl -n llm exec "$pod" -c vllm -- cat /models/astra/release-identity.json
-  kubectl -n llm logs "$pod" -c verify-model
-done
-```
+## Send a request and find it in LiteLLM
 
-**Pass:** both replicas are ready, their nodes map to different zones, both release identities and manifest hashes match the approved record, and both loader logs report verified integrity. Match the runtime image digest too. A release label alone is insufficient.
+Run the short OpenAI Chat Completions example from Application Onboarding with your application's own key. Then open LiteLLM and find that application's usage. Refresh the view if the usage record has not appeared yet.
 
-- [ ] **3. Verify shared Redis and PostgreSQL.**
+Check the model name, token usage and the application or team that owns the request. Open its key settings and review the allowed model, rate limit and budget. Do not reveal or copy the gateway master key.
 
-```bash
-kubectl -n gateway get pods -l app=litellm -o wide
-kubectl -n gateway get deployment litellm -o jsonpath='{.spec.template.spec.containers[0].envFrom}'
-kubectl -n gateway get service litellm
-kubectl -n gateway get endpointslices -l kubernetes.io/service-name=litellm
-```
+**Expected result:** Astra returns an answer and LiteLLM attributes the usage to the correct application. LiteLLM's usage cost is application accounting; review actual infrastructure charges in AWS Billing.
 
-**Pass:** both ready pods use litellm-env and the ClusterIP Service has both endpoints. In the authorized secret manager, compare only the connection hostnames: Redis uses the managed primary endpoint and PostgreSQL uses the RDS endpoint. Do not print the connection strings. Send requests through each gateway using an approved diagnostic client and the same test application key. Confirm one shared usage record and the configured shared rate limit. Save pod names, redacted hostnames and the usage result.
+## Follow an assistant request in MLflow
 
-- [ ] **4. Reject missing, revoked and unauthorized keys.** Run a missing-key test:
+Open the Kubernetes assistant and ask it to explain a synthetic Pending pod in its permitted namespace. Open MLflow, sign in and follow the redirect to the managed UI. Find the new assistant trace.
 
-```bash
-python verify_endpoint.py --expect denied
-```
+Open the model call, tool call, tool result and final answer. Confirm that the answer reflects the returned tool data. Open the prompt's numeric version and the evaluation run linked to the model release. Inspect the recorded scores, individual results and permitted artifacts. Add feedback to the trace using the configured reviewer access.
 
-Create two disposable application keys: one allowed to use astra and one without astra permission. Confirm the allowed key works, revoke it, then test it again through the same HTTPS address. Load the revoked and unauthorized keys into REVOKED_KEY and UNAUTHORIZED_KEY using hidden prompts as in Application Onboarding.
+Repeat with the AWS assistant using a read-only infrastructure question. Confirm that it has its own trace and application usage record.
 
-```bash
-python verify_endpoint.py --expect denied --key-env REVOKED_KEY
-python verify_endpoint.py --expect denied --key-env UNAUTHORIZED_KEY
-unset REVOKED_KEY UNAUTHORIZED_KEY
-```
+**Expected result:** you can follow a real request, identify the prompt and model release it used, and inspect the evaluation evidence. A synthetic demonstration trace is not the request you just made. If a required view or record is missing, leave that check unfinished and fix the integration.
 
-**Pass:** each denial reports PASS with HTTP 401 or 403 and an API error. A timeout, certificate error, 429 or 5xx is not evidence that key authorization works. Keep the valid-key baseline and denied statuses.
+## Observe the GPU and service health
 
-- [ ] **5. Prevent direct application access to vLLM.** From the Kubernetes assistant pod, use its Python interpreter to try the backend health URL. Set APP_POD to that pod's name:
+Open Grafana and select a recent time range. Send a few short requests through Astra. Watch GPU utilization, GPU memory, ready replicas, request volume, errors and response time. Check that the dashboards contain current data from both GPU workers.
 
-```bash
-kubectl -n k8s-assistant exec "$APP_POD" -- python -c 'import urllib.request; urllib.request.urlopen("http://vllm.llm.svc.cluster.local:8000/health", timeout=5)'
-kubectl -n llm get networkpolicy
-```
+In the AWS console, open CloudWatch for the cluster and managed services. Check their recent health metrics and logs. Open RDS and ElastiCache to confirm the database and cache are available and have the configured Multi-AZ setup.
 
-**Pass:** the connection is blocked by the applied network policy. Any HTTP response, including 401, means the network path exists and needs investigation. Repeat an allowed gateway request to distinguish an isolation rule from a broken model service. A missing Python interpreter is not a passing test.
+**Expected result:** the dashboards show live measurements. GPU utilization can fall between short requests; a quiet graph is not by itself a fault. Empty or stale graphs need investigation.
 
-- [ ] **6. Verify the serving identity's boundaries.** Use a disposable diagnostic pod with the vllm service account and the approved AWS CLI image. Read a known synthetic object from the release bucket by version, then attempt a known synthetic quarantine object. Attempt a write only to the designated permission-test prefix in the evidence bucket, never to an existing report.
+## Record the result and move to recovery
 
-**Pass:** the release read succeeds; the quarantine read and evidence write return AccessDenied. Save the caller identity and error codes with account details redacted. If the test write succeeds, remove that test object, correct the role and repeat. An IAM policy document or simulator result alone does not complete this live check.
+Record the deployed Git revision, model release, successful application request and MLflow trace. Note any missing page, unhealthy resource or failed request and fix it before handing over the service.
 
-## Verify the model release controls
+This walkthrough demonstrates the running platform. Use the checks in each build step to verify permissions and release controls; opening a dashboard alone does not prove those controls work. The detailed engineering checks remain in the repository for deeper validation.
 
-- [ ] **7. Verify scanning and evaluation before promotion.**
-
-```bash
-aws sagemaker list-pipeline-execution-steps --region us-east-1 \
-  --pipeline-execution-arn "$PIPELINE_EXECUTION_ARN"
-aws sagemaker describe-model-package --region us-east-1 \
-  --model-package-name "$MODEL_PACKAGE_ARN" \
-  --query '{Approval:ModelApprovalStatus,Metadata:CustomerMetadataProperties}'
-```
-
-**Pass:** the exact pinned Hugging Face revision is linked to per-object scan evidence, successful validation/evaluation steps, an MLflow evaluation run and the reviewed model package. Compare their hashes and timestamps with the promoted release. A successful GitHub trigger alone does not pass this item.
-
-- [ ] **8. Block failed or unapproved candidates.**
-
-```bash
-python -m unittest discover -s tests -p 'test_release_gate.py' -v
-```
-
-Then run the isolated rejection exercises from Model Release Pipeline: an incomplete scan result, a failed evaluation and a package left PendingManualApproval. Use synthetic evidence in the dedicated test workflow; never manufacture a successful malware scan.
-
-**Pass:** all three attempts stop before publication, no complete release-manifest.json is written for those candidate IDs, and the previously approved serving release still answers. Save each execution ARN and the rejected reason. Local unit tests alone do not complete this item.
-
-- [ ] **9. Verify the release manifest.** Retrieve the exact manifest version recorded by promotion:
-
-```bash
-aws s3api get-object --region us-east-1 \
-  --bucket "$RELEASE_BUCKET" --key "$MANIFEST_KEY" \
-  --version-id "$MANIFEST_VERSION" evidence/release-manifest.json
-sha256sum evidence/release-manifest.json
-python -m json.tool evidence/release-manifest.json
-```
-
-**Pass:** the file hash matches MANIFEST_SHA256. Inspect the publisher/repository, full revision, release ID, runtime image digest, object keys, object versions, sizes and hashes. Compare them with the loader identities from check 2 and the approval evidence from check 7. Save the manifest and comparison.
-
-## Verify applications and MLflow
-
-- [ ] **10. Complete a Kubernetes assistant tool cycle.** Ask the application to explain a synthetic Pending pod in its permitted namespace. Inspect its response and MLflow trace.
-
-**Pass:** the trace shows an Astra model call, the approved Kubernetes tool and arguments, the tool result and a final answer consistent with that result. Save the request and trace IDs. A direct cURL model answer does not prove the assistant's tool loop works.
-
-- [ ] **11. Complete an AWS assistant tool cycle.** Ask the AWS assistant to list the state of Astra-tagged EC2 instances. Inspect the tool result and trace, then compare the instance state with EC2.
-
-**Pass:** the assistant uses list_instances with its own read-only role and application key. The answer matches returned data, and LiteLLM attributes the usage to the AWS assistant rather than the Kubernetes assistant. Save the trace ID and redacted usage evidence.
-
-- [ ] **12. Enforce tool permissions outside the prompt.** Run the Kubernetes authorization checks from an operator identity allowed to impersonate this service account:
-
-```bash
-kubectl auth can-i list pods -n synthetic --as=system:serviceaccount:k8s-assistant:k8s-assistant
-kubectl auth can-i list pods -n kube-system --as=system:serviceaccount:k8s-assistant:k8s-assistant
-kubectl auth can-i delete pods -n synthetic --as=system:serviceaccount:k8s-assistant:k8s-assistant
-```
-
-**Pass:** results are yes, no and no. Also request the forbidden namespace through the actual assistant and confirm it cannot retrieve that data. Under the AWS assistant's identity, use EC2 terminate-instances with --dry-run against a disposable test instance. UnauthorizedOperation is the expected denial; DryRunOperation means the role has termination permission and fails the check. Never omit --dry-run. Save the denied results and correct any excessive permission.
-
-- [ ] **13. Verify MLflow browser access.** Open the MLflow URL from Terraform domain_configuration in a private browser window. Attempt access before sign-in, then sign in with an approved identity. Repeat with a test identity without MLflow access.
-
-**Pass:** access requires sign-in, the approved identity reaches the managed MLflow UI through the launcher, and the unauthorized identity is denied. Save redacted screenshots. Do not save the temporary signed redirect URL.
-
-- [ ] **14. Verify prompt versions.** Open the Prompt Registry in the managed MLflow UI. Open the prompt used by each assistant and compare its numeric version and content hash with the application's release record.
-
-**Pass:** both the registered version and the application-linked version are visible and agree. Keep the version URI and redacted screenshot.
-
-- [ ] **15. Verify real application traces.** Run one fresh request through each assistant and open the resulting traces.
-
-**Pass:** each trace has the real model and tool spans, their timing and status, and the correct application/model release references. The earlier synthetic trace smoke test does not satisfy this check.
-
-- [ ] **16. Inspect evaluation results and feedback.** Open the evaluation run linked to the release. Inspect its scores, individual case report, reviewer feedback and permitted artifacts using the intended reviewer identity.
-
-**Pass:** the results are readable and linked to the actual candidate; a passing summary is supported by individual cases. Record the run ID and evidence locations. Leave the item incomplete if the selected managed MLflow version does not support a required feature.
-
-- [ ] **17. Follow the release lineage.** Start from an assistant request and follow its trace to the application image, numeric prompt version, Astra release, tool-schema hash and evaluation dataset hash.
-
-**Pass:** all five identities can be found and match the release record. Save their IDs and links. An unlinked artifact in a bucket does not establish lineage.
-
-## Verify monitoring and recovery
-
-- [ ] **18. Verify live monitoring.** Send a small number of synthetic requests. Open Grafana and inspect GPU utilization/memory, ready model and gateway replicas, queues, errors and response time. Open CloudWatch for EKS logs and the relevant AWS service metrics.
-
-**Pass:** the charts contain current data for both GPU replicas and gateway pods, and request activity is visible. Check timestamps and scrape-target health; a static dashboard with no data does not pass. Save timestamped screenshots and a representative log event without prompt content.
-
-- [ ] **19. Verify alert delivery.** Create a temporary test alert in the test environment that matches a known current metric. Route it through the configured notification path, then remove the test rule after it fires.
-
-**Pass:** the alert reaches the intended operational destination with the correct service and severity, then resolves. Record its firing, receipt and resolution times. Use a designated test destination for the exercise.
-
-- [ ] **20. Verify rollback.** Follow Troubleshooting and Recovery to deploy a deliberately failing candidate in staging. Restore the saved model, application and prompt combination.
-
-**Pass:** the restored versions match the prior approved record, the authenticated request passes and both assistant regression tests pass. Save the failed rollout event, restored release identity and test results. A successful rollout command alone is insufficient.
-
-- [ ] **21. Measure failure recovery.** Perform the four separate exercises in Troubleshooting and Recovery: one model pod loss, one gateway pod loss, Redis failover and RDS failover. Run a bounded request probe during each exercise.
-
-**Pass:** each exercise records the injected failure time, failed/interrupted requests, recovery time and a successful final authenticated request. Compare recovery with the agreed target. Record streams that fail; do not claim they transfer to another replica.
-
-- [ ] **22. Verify a database restore.** Restore the selected RDS snapshot to a new isolated private instance. Connect a disposable gateway to that restored database and compare the expected synthetic application records and usage rows.
-
-**Pass:** the restored records agree with the snapshot's test baseline, the disposable gateway can read them, and live gateway configuration remains unchanged. Save the snapshot ID, restore ID and redacted comparison, then remove the disposable gateway and restored instance through Cleanup.
-
-## Verify automation, recovery access and costs
-
-- [ ] **23. Verify CI, GitOps and the OIDC boundary.** Submit a real model-release PR. Inspect the hosted checks, approved merge, environment approval and recorded SageMaker execution ARN in GitHub Actions. Inspect the deployed revision in Argo CD.
-
-```bash
-kubectl -n argocd get applications -o wide
-```
-
-**Pass:** the trusted GitHub-hosted job starts the intended pipeline version, and Argo CD reports the expected Git revision as Synced and Healthy. From a controlled test repository outside the OIDC trust, attempt the same role assumption without other AWS credentials. Expect AccessDenied from STS. Save both job results and the Argo CD revision. Do not weaken role trust for the negative test.
-
-- [ ] **24. Verify recovery without CI.** Use the authorized operator session and saved Terraform state to reach the private EKS API. Inspect and recover the Argo CD deployment from the recorded configuration while no CI job is running.
-
-```bash
-kubectl -n argocd get deployments,pods
-```
-
-**Pass:** you can reach the cluster and restore the controller without a GitHub job. Argo CD returns to Healthy and Synced at the approved revision. Record the recovery steps. Do not destroy the cluster for this check.
-
-- [ ] **25. Verify the recorded versions.**
-
-```bash
-terraform version
-terraform -chdir=infra providers
-helm list -A
-kubectl -n llm get pods -l app=vllm -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.containerStatuses[*].imageID}{"\n"}{end}'
-```
-
-**Pass:** the release record includes the tested Terraform/Python versions, provider lock file, exact chart versions and deployed image digests. Compare recorded values with these results and the CI run. Save the comparison; a floating image tag is insufficient.
-
-- [ ] **26. Review actual costs.** In AWS Cost Explorer, select the test dates and account, group by service and inspect the platform's compute, GPU, SageMaker, MLflow, database, cache, network and storage charges. Filter by Project tags where cost allocation tags have been activated. Review LiteLLM's application usage for the same period separately.
-
-**Pass:** you can explain the AWS charges and the gateway's token-based accounting without treating them as the same bill. Record the date range, costs and any billing-data delay. Keep the review open until delayed charges are visible.
+Continue to Troubleshooting and Recovery to practise finding and fixing a failure. Complete Cleanup when the exercise is finished.

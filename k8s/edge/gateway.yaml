@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-system
+---
+apiVersion: gateway.k8s.aws/v1
+kind: LoadBalancerConfiguration
+metadata:
+  name: astra-public
+  namespace: platform-system
+spec:
+  scheme: internet-facing
+  ipAddressType: ipv4
+  sourceRanges: ${ALLOWED_CIDRS}
+  tags:
+    Project: astra
+    AstraStack: ${CLUSTER_NAME}
+  listenerConfigurations:
+    - protocolPort: HTTPS:443
+      defaultCertificate: ${ACM_CERTIFICATE_ARN}
+      sslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: ${CLUSTER_NAME}-alb
+spec:
+  controllerName: gateway.k8s.aws/alb
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: astra-public
+  namespace: platform-system
+  labels:
+    astra/platform: ${CLUSTER_NAME}
+spec:
+  gatewayClassName: ${CLUSTER_NAME}-alb
+  infrastructure:
+    parametersRef:
+      group: gateway.k8s.aws
+      kind: LoadBalancerConfiguration
+      name: astra-public
+  listeners:
+    - name: https
+      hostname: '*.${DOMAIN_NAME}'
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              astra/public-routes: ${CLUSTER_NAME}

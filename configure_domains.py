@@ -15,9 +15,9 @@ from pathlib import Path
 import yaml
 
 from render_manifest import render
+from gateway_routes import build_resources
 
 ROOT = Path(__file__).resolve().parent
-ALB = "alb.ingress.kubernetes.io/"
 DNS = "external-dns.alpha.kubernetes.io/"
 
 
@@ -105,8 +105,8 @@ def validate(config):
                     raise ValueError("OIDC endpoints must use HTTPS")
 
 
-def build_ingresses(config, services):
-    """Build one HTTPS Ingress per selected service."""
+def build_routes(config, services):
+    """Validate inputs before creating Gateway API configuration."""
     validate(config)
     routes = catalog()
     if not services:
@@ -115,65 +115,13 @@ def build_ingresses(config, services):
         if service not in routes:
             raise ValueError("Select supported service keys")
         if service != "inference" and not config.get("browser_auth"):
-            raise ValueError(
-                "Set approved browser_auth in terraform.tfvars before publishing browser services"
-            )
-    ingresses = []
-    for key in sorted(set(services)):
-        route = routes[key]
-        annotations = {
-            ALB + "scheme": "internet-facing",
-            ALB + "target-type": "ip",
-            ALB + "group.name": config["cluster_name"] + "-public",
-            ALB + "listen-ports": '[{"HTTPS":443}]',
-            ALB + "ip-address-type": "ipv4",
-            ALB + "ssl-policy": "ELBSecurityPolicy-TLS13-1-2-2021-06",
-            ALB + "certificate-arn": config["acm_certificate_arn"],
-            ALB + "inbound-cidrs": ",".join(config["allowed_cidrs"]),
-            ALB + "backend-protocol": route.get("protocol", "HTTP"),
-            ALB + "healthcheck-protocol": route.get("protocol", "HTTP"),
-            ALB + "healthcheck-path": route["health_path"],
-            DNS + "hostname": config["hosts"][key],
-        }
-        if key != "inference":
-            auth = config["browser_auth"]
-            provider_annotation = ALB + "auth-idp-" + auth["type"]
-            provider_settings = json.dumps(auth["parameters"], separators=(",", ":"))
-            annotations.update(
-                {
-                    ALB + "auth-type": auth["type"],
-                    provider_annotation: provider_settings,
-                    ALB + "auth-on-unauthenticated-request": "authenticate",
-                    ALB + "auth-session-cookie": "Astra-" + key.replace("_", "-"),
-                    ALB + "auth-session-timeout": "1800",
-                    ALB + "auth-scope": "openid",
-                }
-            )
-        # Build the route from the backend Service outward to its public host.
-        backend = {
-            "service": {"name": route["service"], "port": {"number": route["port"]}},
-        }
-        path = {"path": route["path"], "pathType": "Prefix", "backend": backend}
-        rule = {"host": config["hosts"][key], "http": {"paths": [path]}}
-        ingresses.append(
-            {
-                "apiVersion": "networking.k8s.io/v1",
-                "kind": "Ingress",
-                "metadata": {
-                    "name": "astra-" + key.replace("_", "-"),
-                    "namespace": route["namespace"],
-                    "labels": {"astra/platform": config["cluster_name"]},
-                    "annotations": annotations,
-                },
-                "spec": {"ingressClassName": "alb", "rules": [rule]},
-            }
-        )
-    return ingresses
+            raise ValueError("Set approved browser_auth before publishing browser services")
+    return build_resources(config, services, routes)
 
 
 def render_bundle(config, services, directory):
     """Write the generated YAML and endpoint list without changing AWS."""
-    ingresses = build_ingresses(config, services)
+    resources = build_routes(config, services)
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     values = {}
@@ -188,8 +136,8 @@ def render_bundle(config, services, directory):
     template = (ROOT / "k8s/edge/external-dns.yaml").read_text(encoding="utf-8")
     controller = render(template, values)
     (directory / "external-dns.yaml").write_text(controller, encoding="utf-8")
-    (directory / "ingresses.yaml").write_text(
-        yaml.safe_dump_all(ingresses, sort_keys=False), encoding="utf-8"
+    (directory / "routes.yaml").write_text(
+        yaml.safe_dump_all(resources, sort_keys=False), encoding="utf-8"
     )
     argocd = {
         "global": {"domain": config["hosts"]["argocd"]},
@@ -222,7 +170,7 @@ def render_bundle(config, services, directory):
     (directory / "endpoints.json").write_text(
         json.dumps(endpoints, indent=2) + "\n", encoding="utf-8"
     )
-    return ingresses
+    return resources
 
 
 def assert_context(config, kube_config):
@@ -331,7 +279,11 @@ def preflight(config, services, context, run=command):
         )
     )["ResourceRecordSets"]
     assert_dns_ownership(config, records, services)
-    # 3. Require the load balancer controller and each backend Service.
+    # 3. Require Gateway API definitions, the controller and each backend Service.
+    for name in ("gateways.gateway.networking.k8s.io", "httproutes.gateway.networking.k8s.io",
+                 "loadbalancerconfigurations.gateway.k8s.aws", "listenerruleconfigurations.gateway.k8s.aws",
+                 "targetgroupconfigurations.gateway.k8s.aws"):
+        run(kube + ["get", "crd", name, "-o", "name"])
     controller = json.loads(
         run(
             kube
@@ -475,7 +427,7 @@ def apply_bundle(config, services, directory, context):
             ]
         )
     print(
-        command(kube + ["apply", "-f", str(Path(directory) / "ingresses.yaml")]), end=""
+        command(kube + ["apply", "-f", str(Path(directory) / "routes.yaml")]), end=""
     )
     print(
         "Routes applied. DNS, HTTPS, sign-in and inference still require live verification."

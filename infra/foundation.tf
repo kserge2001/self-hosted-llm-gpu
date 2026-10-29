@@ -20,6 +20,11 @@ variable "azs" {
 variable "operator_role_arn" { type = string }
 variable "operator_cidr" { type = string }
 variable "gpu_instance_type" { type = string }
+variable "gpu_instance_type_overrides" {
+  description = "Optional per-zone replacement when the selected instance size has no capacity. Use a reviewed GPU-compatible size."
+  type        = map(string)
+  default     = {}
+}
 variable "gpu_enabled" {
   type    = bool
   default = true
@@ -148,7 +153,7 @@ module "eks" {
       subnet_ids          = [module.vpc.private_subnets[index]]
       ami_type            = "AL2023_x86_64_NVIDIA"
       ami_release_version = local.gpu_ami_release
-      instance_types      = [var.gpu_instance_type]
+      instance_types      = [lookup(var.gpu_instance_type_overrides, az, var.gpu_instance_type)]
       min_size            = 1, max_size = 2, desired_size = 1
       block_device_mappings = { root = {
         device_name = "/dev/xvda"
@@ -298,6 +303,7 @@ resource "aws_ecr_repository" "images" {
   force_delete = false
 }
 output "cluster" { value = module.eks.cluster_name }
+output "operator_role_arn" { value = var.operator_role_arn }
 output "buckets" { value = { for k, v in aws_s3_bucket.data : k => v.bucket } }
 output "private_subnets" { value = module.vpc.private_subnets }
 output "vpc" { value = module.vpc.vpc_id }

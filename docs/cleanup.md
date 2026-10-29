@@ -6,7 +6,7 @@ First decide what must be retained: approved releases, scan and evaluation evide
 
 1. Pause Argo CD reconciliation for the disposable applications. Disable scheduled workflows and new model evaluations. Wait for running jobs to finish or cancel the exact disposable job.
 2. Stop load generators and remove temporary application keys and tool permissions.
-3. Remove this stack's generated Ingress resources while AWS Load Balancer Controller and ExternalDNS are running. Wait for its DNS records, ALB and target groups to disappear. Keep the existing hosted zone and wildcard certificate.
+3. Remove this stack's HTTPRoutes while AWS Load Balancer Controller and ExternalDNS are running. Wait for its DNS and ownership records to disappear, then remove its Gateway and wait for its ALB and target groups to disappear. Follow Platform addresses for the scoped commands. Keep the existing hosted zone and wildcard certificate.
 4. Remove assistant, gateway and model workloads. Verify no Pod still depends on the stores or model volumes.
 5. Stop the managed MLflow tracking server if it is not needed, or delete it only under the agreed retention plan. Preserve its artifact bucket when evidence must be retained.
 6. Remove the dedicated controllers after their resources are cleaned up. Use the operator session for the remaining teardown.
@@ -15,7 +15,7 @@ First decide what must be retained: approved releases, scan and evaluation evide
 9. Inventory remaining GPU/CPU instances, EBS volumes, load balancers, NAT gateways, interface endpoints, RDS/Redis resources, snapshots, ECR images, buckets, logs and MLflow resources. Confirm no unintended recurring compute remains.
 
 ```bash
-kubectl get ingress -A
+kubectl get gateway,httproute -A
 kubectl get pvc -A
 aws sagemaker list-processing-jobs --region us-east-1 --status-equals InProgress
 aws sagemaker list-mlflow-tracking-servers --region us-east-1

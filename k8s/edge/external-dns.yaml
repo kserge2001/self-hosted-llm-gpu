@@ -16,11 +16,11 @@ kind: ClusterRole
 metadata:
   name: astra-external-dns
 rules:
-  - apiGroups: [networking.k8s.io]
-    resources: [ingresses]
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [gateways, httproutes]
     verbs: [get, list, watch]
   - apiGroups: ['']
-    resources: [services, endpoints, pods, nodes]
+    resources: [services, endpoints, pods, nodes, namespaces]
     verbs: [get, list, watch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -62,7 +62,7 @@ spec:
           # Official v0.24.0 multi-platform manifest, resolved 2026-10-29.
           image: registry.k8s.io/external-dns/external-dns@sha256:a80a146d2540fa138565e404f0625157271071a06093021f27ae19d8316d10f9
           args:
-            - --source=ingress
+            - --source=gateway-httproute
             - --provider=aws
             - --domain-filter=${DOMAIN_NAME}
             - --zone-id-filter=${ZONE_ID}
