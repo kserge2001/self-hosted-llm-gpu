@@ -10,7 +10,7 @@ Start by [importing the starter into your own GitHub account](docs/repository-se
 
 Python implementations are supplied as repository files. Kubernetes manifests and Helm values are under k8s/.
 
-Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute per application, backed by an AWS Application Load Balancer. Argo CD opens its own login directly over HTTPS. The other browser routes use Cognito; the inference route uses application keys. See the validation status for completed live checks.
+Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute per application, backed by an AWS Application Load Balancer. Argo CD and Grafana open their own logins directly over HTTPS. The other browser routes use Cognito; the inference route uses application keys. See the validation status for completed live checks.
 
 Use the focused guides for [application onboarding](docs/application-onboarding.md), [platform verification](docs/acceptance-checks.md), [troubleshooting and recovery](docs/troubleshooting-recovery.md), and [cleanup](docs/cleanup.md).
 

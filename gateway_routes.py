@@ -82,8 +82,8 @@ def build_resources(config, services, catalog):
             "matches": [{"path": {"type": "PathPrefix", "value": target["path"]}}],
             "backendRefs": [{"name": target["service"], "port": target["port"]}],
         }
-        # Argo CD handles its own login. Model requests use application keys.
-        if service not in ("inference", "argocd"):
+        # Argo CD and Grafana handle their own logins. Model requests use keys.
+        if service not in ("inference", "argocd", "grafana"):
             authentication = browser_authentication(config, service, namespace)
             resources.append(authentication)
             rule["filters"] = [{

@@ -6,7 +6,7 @@ variable "create_cognito" {
 
 locals {
   create_dashboard_pool = var.create_cognito && var.browser_auth == null
-  browser_callback_urls = [for key, host in local.service_hosts : "https://${host}/oauth2/idpresponse" if !contains(["inference", "argocd"], key)]
+  browser_callback_urls = [for key, host in local.service_hosts : "https://${host}/oauth2/idpresponse" if !contains(["inference", "argocd", "grafana"], key)]
   effective_browser_auth = var.browser_auth != null ? var.browser_auth : (local.create_dashboard_pool ? {
     type = "cognito"
     parameters = {
@@ -57,7 +57,7 @@ resource "aws_cognito_user_pool_client" "dashboards" {
   allowed_oauth_scopes                 = ["openid"]
   supported_identity_providers         = ["COGNITO"]
   callback_urls                        = local.browser_callback_urls
-  logout_urls                          = [for key, host in local.service_hosts : "https://${host}/" if !contains(["inference", "argocd"], key)]
+  logout_urls                          = [for key, host in local.service_hosts : "https://${host}/" if !contains(["inference", "argocd", "grafana"], key)]
   prevent_user_existence_errors        = "ENABLED"
   enable_token_revocation              = true
   explicit_auth_flows                  = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]

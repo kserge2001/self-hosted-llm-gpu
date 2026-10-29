@@ -79,7 +79,7 @@ class DomainTests(unittest.TestCase):
         resources = domains.build_routes(fixture(), list(domains.catalog()))
         authentication = {r["metadata"]["name"]: r for r in resources if r["kind"] == "ListenerRuleConfiguration"}
         for route in resources:
-            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] in ("astra-inference", "astra-argocd"):
+            if route["kind"] != "HTTPRoute" or route["metadata"]["name"] in ("astra-inference", "astra-argocd", "astra-grafana"):
                 continue
             reference = route["spec"]["rules"][0]["filters"][0]["extensionRef"]["name"]
             protection = authentication[reference]
@@ -218,6 +218,14 @@ class DomainTests(unittest.TestCase):
         self.assertEqual(load_balancer["spec"]["sourceRanges"], config["allowed_cidrs"])
         self.assertEqual(load_balancer["spec"]["listenerConfigurations"][0]["defaultCertificate"], config["acm_certificate_arn"])
         self.assertFalse(any(r["kind"] == "Ingress" for r in resources))
+
+    def test_grafana_uses_its_own_login(self):
+        config = fixture()
+        config["browser_auth"] = None
+        resources = domains.build_routes(config, ["grafana"])
+        route = next(r for r in resources if r["kind"] == "HTTPRoute")
+        self.assertNotIn("filters", route["spec"]["rules"][0])
+        self.assertFalse(any(r["kind"] == "ListenerRuleConfiguration" for r in resources))
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ Updated October 29, 2026. Use the latest commit on e2e/astra for independent tes
 - Cert-manager issued the load-balancer controller's internal certificates. Argo CD, the load-balancer controller and External Secrets Operator deployed successfully.
 - External Secrets Operator synchronized the model API key from AWS Secrets Manager with a role limited to that one secret. Its value was not placed in Git or printed.
 - The Argo CD Gateway API route was accepted, the ALB target became healthy, and ExternalDNS created the records. The updated route opens Argo CD's own login directly over HTTPS, without Cognito. A fresh request returned HTTP 200 and the browser displayed the native login. Signing in to administer Argo CD is still pending.
-- The EBS CSI add-on became Active. Argo CD deployed Grafana, Prometheus and Alertmanager; all their pods became Ready and the Grafana and Prometheus volumes became Bound. The Grafana route was accepted and Route 53 answered its DNS record. Public resolver availability and browser sign-in are still being checked.
+- The EBS CSI add-on became Active. Argo CD deployed Grafana, Prometheus and Alertmanager; all their pods became Ready and the Grafana and Prometheus volumes became Bound. Grafana DNS, HTTPS and administrator sign-in passed. Its updated route sends a fresh unauthenticated request directly to Grafana's own /login page, without Cognito. GPU dashboards still need the DCGM exporter and a live model workload.
 
 These results do not prove model inference, application behavior or recovery.
 

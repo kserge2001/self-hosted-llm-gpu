@@ -114,7 +114,7 @@ def build_routes(config, services):
     for service in services:
         if service not in routes:
             raise ValueError("Select supported service keys")
-        if service not in ("inference", "argocd") and not config.get("browser_auth"):
+        if service not in ("inference", "argocd", "grafana") and not config.get("browser_auth"):
             raise ValueError("Set approved browser_auth before publishing browser services")
     return build_resources(config, services, routes)
 
@@ -324,7 +324,7 @@ def preflight(config, services, context, run=command):
             raise ValueError(
                 f"{key} needs its expected ClusterIP service and port before exposure"
             )
-        if key not in ("inference", "argocd") and config["browser_auth"]["type"] == "oidc":
+        if key not in ("inference", "argocd", "grafana") and config["browser_auth"]["type"] == "oidc":
             secret = config["browser_auth"]["parameters"]["secretName"]
             run(
                 kube + ["-n", route["namespace"], "get", "secret", secret, "-o", "name"]
@@ -332,7 +332,7 @@ def preflight(config, services, context, run=command):
     # 4. Check the Cognito return addresses before exposing browser pages.
     browser_services = []
     for service in services:
-        if service not in ("inference", "argocd"):
+        if service not in ("inference", "argocd", "grafana"):
             browser_services.append(service)
     if browser_services and config["browser_auth"]["type"] == "cognito":
         parameters = config["browser_auth"]["parameters"]
