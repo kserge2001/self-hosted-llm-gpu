@@ -2,8 +2,9 @@
 
 import os
 import boto3
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.responses import RedirectResponse
+from apps.alb_auth import authenticated_user
 
 app = FastAPI()
 sagemaker = boto3.client("sagemaker", region_name="us-east-1")
@@ -15,8 +16,8 @@ def health():
 
 
 @app.get("/")
-def launch():
-    # Deploy only behind the authenticated ALB and restricted target network.
+def launch(x_amzn_oidc_data: str = Header(default="")):
+    authenticated_user(x_amzn_oidc_data)
     result = sagemaker.create_presigned_mlflow_tracking_server_url(
         TrackingServerName=os.environ["MLFLOW_TRACKING_SERVER_NAME"],
         ExpiresInSeconds=60,

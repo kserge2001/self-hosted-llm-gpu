@@ -10,6 +10,8 @@ spec:
     - https://prometheus-community.github.io/helm-charts
   destinations:
     - server: https://kubernetes.default.svc
+      namespace: mlflow
+    - server: https://kubernetes.default.svc
       namespace: monitoring
     - server: https://kubernetes.default.svc
       namespace: kube-system

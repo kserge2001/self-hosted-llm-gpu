@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mlflow
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mlflow-launcher
+  namespace: mlflow
+  annotations:
+    eks.amazonaws.com/role-arn: {{ required "roleArn is required" .Values.roleArn }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-launcher
+  namespace: mlflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: mlflow-launcher}
+  template:
+    metadata:
+      labels: {app: mlflow-launcher}
+    spec:
+      serviceAccountName: mlflow-launcher
+      nodeSelector: {astra/tier: cpu}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: launcher
+          image: {{ required "image is required" .Values.image }}
+          ports:
+            - {name: http, containerPort: 8000}
+          env:
+            - {name: MLFLOW_TRACKING_SERVER_NAME, value: {{ required "trackingServerName is required" .Values.trackingServerName | quote }}}
+            - {name: EXPECTED_ALB_ARN, value: {{ required "loadBalancerArn is required" .Values.loadBalancerArn | quote }}}
+            - {name: COGNITO_CLIENT_ID, value: {{ required "cognitoClientId is required" .Values.cognitoClientId | quote }}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 256Mi}
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-launcher
+  namespace: mlflow
+spec:
+  type: ClusterIP
+  selector: {app: mlflow-launcher}
+  ports:
+    - {name: http, port: 8000, targetPort: http}
+

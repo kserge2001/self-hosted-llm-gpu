@@ -34,4 +34,17 @@ Application sync-wave annotations alone do not enforce readiness between indepen
 
 Change the relevant YAML or Helm values in your repository, open a PR and review the diff. After merging, refresh the application in Argo CD and review and sync the change. Avoid a separate helm upgrade for an application Argo CD manages, because it would create a second source of configuration.
 
-The monitoring and storage applications are the first GitOps definitions. Model, gateway and assistant deployment applications still need their complete release configuration before they can be registered and verified.
+## E. Deploy the MLflow launcher
+
+Terraform creates the managed tracking server and the launcher's AWS role. Build apps/Dockerfile.mlflow-launcher and push it to your ECR repository. Record the image digest. The small launcher verifies the signed identity from the configured ALB before issuing a temporary MLflow UI link.
+
+Set MLFLOW_LAUNCHER_IMAGE to that digest, MLFLOW_LAUNCHER_ROLE_ARN and MLFLOW_TRACKING_SERVER_NAME from the Terraform mlflow output, EXPECTED_ALB_ARN to your platform ALB, and COGNITO_CLIENT_ID to the configured dashboard client. Reuse the repository URL and revision from section B.
+
+```bash
+python render_manifest.py argocd/mlflow.yaml k8s/generated/argocd-mlflow.yaml
+kubectl apply -f k8s/generated/argocd-mlflow.yaml
+```
+
+Open astra-mlflow in Argo CD and sync it. Wait for both launcher pods and the managed server to be ready. Then publish the MLflow route with configure_domains.py. Verify the browser sign-in and redirect, and confirm a request made directly to the launcher without a signed ALB identity is rejected.
+
+Model, gateway and assistant deployment applications still need their complete release configuration before they can be registered and verified.
