@@ -25,6 +25,10 @@ terraform show teardown.plan
 
 The last two commands create and display a deletion plan. After checking the resources to keep, apply the saved plan with terraform apply teardown.plan. Keep the local state file until Terraform finishes and you have checked for remaining resources. Do not delete the state file as a way to remove AWS resources.
 
+Before deleting RDS, set database_deletion_protection to false in your private Terraform inputs and apply that change. The default retains a final database snapshot. Set retain_final_database_snapshot to false only when the database contains disposable test data and its removal is approved. A retained encrypted snapshot requires its KMS key to remain usable.
+
+Storage volumes with the Retain policy survive deletion of their Kubernetes claims. Record the exact volume IDs and remove approved disposable volumes after they detach. Versioned S3 buckets and ECR repositories also remain until their approved contents have been removed. Keep test evidence locally before removing its cloud copies.
+
 
 ## Confirm cleanup and remaining charges
 

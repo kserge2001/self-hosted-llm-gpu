@@ -2,6 +2,8 @@
 
 Updated October 29, 2026. Use the latest commit on e2e/astra for independent testing. The test account's credentials, Terraform state and private configuration are not included.
 
+The live test was stopped at the owner's request and cleanup is in progress. This is not an end-to-end verified lab. The results below describe what was observed before teardown; they do not mean the temporary addresses remain available.
+
 ## A. Verified so far
 
 - The Python tests pass locally, including Gateway API rendering, browser authentication configuration and the model API's separate route.
@@ -19,6 +21,8 @@ Updated October 29, 2026. Use the latest commit on e2e/astra for independent tes
 
 Trivy 0.76.1 scanned the pinned vLLM 0.32.0 image and reported 392 HIGH and 17 CRITICAL findings, representing 397 distinct vulnerability IDs. The release check failed. Of the findings, 386 refer to the linux-libc-dev header package and need applicability review; they are not evidence that a kernel shipped inside the container is running. Other findings include Python and operating-system dependencies with available fixes. Do not treat the image as approved, hide the results or bypass the check. A repaired image needs a new digest, scan and compatibility test.
 
+A patched runtime candidate failed its dependency check because its updated OpenTelemetry packages conflict with LMCache's constraints. It was not deployed, promoted or included as a working image in the starter.
+
 These results do not prove model inference, application behavior or recovery.
 
 ## B. Corrections found during the live run
@@ -32,6 +36,8 @@ These results do not prove model inference, application behavior or recovery.
 - The live SageMaker API rejected an explicit MLflow version of 3.0.0. Omitting the requested version created the server, and AWS reported version 3.0.0. The template exposes an optional version input and records the resolved server version. The pinned MLflow client and SageMaker plugin completed the live connectivity check.
 - Publishing a LiteLLM route previously changed its Deployment and triggered an extra pod that could not fit on the CPU workers. Routing now leaves that Deployment to Argo CD. Gateway rolling updates replace one replica at a time and preserve one available replica. The corrected live rollout completed.
 - Route publication now labels existing application namespaces without replacing their Argo CD annotations.
+- The LiteLLM root opens Swagger by default. The route generator now redirects only that hostname's exact root path to /ui/. The separate /v1 inference route is unchanged. Local tests pass; the redirect was not applied live because deployment work had been stopped for cleanup.
+- The two-GPU serving template now replaces one replica at a time. Its former surge setting required a third GPU. The corrected model rollout remains untested because the model was not deployed.
 - The Python dependency lock originally included an unconditional Windows package. The universal lock preserves platform markers, and GitHub's Linux checks passed after the correction.
 
 The tested device-plugin installation is:
@@ -46,7 +52,7 @@ helm upgrade --install nvidia-device-plugin nvdp/nvidia-device-plugin \
 ## C. Not complete or not yet verified
 
 - Two-zone model inference and failover.
-- Completed Cognito sign-in and browser checks for every application.
+- Argo CD administrator sign-in and completed access checks for the assistants.
 - The consolidated bootstrap script from a fresh student account. Its individual controller installation steps and the Argo CD storage/monitoring definitions were exercised live; the full student path still needs its own run.
 - All remaining application secret values and their synchronization.
 - A complete provisioned SageMaker scanning, evaluation and promotion pipeline. The repository currently includes the trigger and supporting scripts, not the complete pipeline definition.

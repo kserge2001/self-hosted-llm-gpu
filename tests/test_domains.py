@@ -42,6 +42,17 @@ def fixture(domain="example.com"):
 
 
 class DomainTests(unittest.TestCase):
+    def test_litellm_root_opens_ui_without_redirecting_api_calls(self):
+        resources = domains.build_routes(fixture(), ["litellm", "inference"])
+        routes = {r["metadata"]["name"]: r for r in resources if r["kind"] == "HTTPRoute"}
+        dashboard = routes["astra-litellm"]["spec"]["rules"]
+        self.assertEqual(dashboard[0]["matches"][0]["path"], {"type": "Exact", "value": "/"})
+        redirect = dashboard[0]["filters"][0]["requestRedirect"]
+        self.assertEqual(redirect["path"]["replaceFullPath"], "/ui/")
+        self.assertEqual(redirect["statusCode"], 302)
+        self.assertIn("backendRefs", dashboard[1])
+        self.assertNotIn("filters", routes["astra-inference"]["spec"]["rules"][0])
+
     def test_domain_change_reaches_all_routes_and_chart_values(self):
         for domain in ("example.com", "platform.example.org"):
             with self.subTest(domain=domain), tempfile.TemporaryDirectory() as temp:
@@ -233,7 +244,8 @@ class DomainTests(unittest.TestCase):
         resources = domains.build_routes(config, ["litellm", "inference"])
         for route in resources:
             if route["kind"] == "HTTPRoute":
-                self.assertNotIn("filters", route["spec"]["rules"][0])
+                for rule in route["spec"]["rules"]:
+                    self.assertFalse(any(f["type"] == "ExtensionRef" for f in rule.get("filters", [])))
         self.assertFalse(any(r["kind"] == "ListenerRuleConfiguration" for r in resources))
 
 

@@ -55,6 +55,16 @@ variable "redis_version" {
   type    = string
   default = "7.1"
 }
+variable "database_deletion_protection" {
+  description = "Disable only for approved teardown after deciding what data to retain."
+  type        = bool
+  default     = true
+}
+variable "retain_final_database_snapshot" {
+  description = "Keep a final database snapshot during teardown. False is for disposable test data only."
+  type        = bool
+  default     = true
+}
 
 data "aws_eks_addon_version" "selected" {
   for_each           = toset(["vpc-cni", "coredns", "kube-proxy"])
@@ -257,8 +267,8 @@ resource "aws_db_instance" "gateway" {
   publicly_accessible         = false
   multi_az                    = true
   backup_retention_period     = 7
-  deletion_protection         = true
-  skip_final_snapshot         = false
+  deletion_protection         = var.database_deletion_protection
+  skip_final_snapshot         = !var.retain_final_database_snapshot
   final_snapshot_identifier   = "${var.name}-gateway-final"
 }
 resource "random_password" "redis" {

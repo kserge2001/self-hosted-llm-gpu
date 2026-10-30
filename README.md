@@ -12,6 +12,8 @@ Python implementations are supplied as repository files. Kubernetes manifests an
 
 Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute per application, backed by an AWS Application Load Balancer. Argo CD, Grafana and LiteLLM open their own logins directly over HTTPS. The other browser routes use Cognito; the inference route uses application keys. See the validation status for completed live checks.
 
+The temporary test is being cleaned up. Its URLs are no longer a live demonstration. [Open managed MLflow with your AWS permissions](docs/mlflow-access.md) when your own tracking server is running.
+
 Use the focused guides for [application onboarding](docs/application-onboarding.md), [platform verification](docs/acceptance-checks.md), [troubleshooting and recovery](docs/troubleshooting-recovery.md), and [cleanup](docs/cleanup.md).
 
 For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring, the MLflow launcher and LiteLLM; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.

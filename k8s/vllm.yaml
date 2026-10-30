@@ -21,7 +21,8 @@ spec:
   revisionHistoryLimit: 3
   progressDeadlineSeconds: 3600
   strategy:
-    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+    # Replace one replica at a time; the two-node pool has no third GPU.
+    rollingUpdate: {maxSurge: 0, maxUnavailable: 1}
   selector:
     matchLabels: {app: vllm}
   template:

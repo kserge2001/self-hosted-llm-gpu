@@ -83,13 +83,23 @@ def build_resources(config, services, catalog):
                 "type": "ExtensionRef",
                 "extensionRef": {"group": "gateway.k8s.aws", "kind": "ListenerRuleConfiguration", "name": authentication["metadata"]["name"]},
             }]
+        rules = [rule]
+        if service == "litellm":
+            # The service root is Swagger; the browser entry point is the UI.
+            rules.insert(0, {
+                "matches": [{"path": {"type": "Exact", "value": "/"}}],
+                "filters": [{"type": "RequestRedirect", "requestRedirect": {
+                    "path": {"type": "ReplaceFullPath", "replaceFullPath": "/ui/"},
+                    "statusCode": 302,
+                }}],
+            })
         resources.append({
             "apiVersion": "gateway.networking.k8s.io/v1", "kind": "HTTPRoute",
             "metadata": {"name": name, "namespace": namespace, "labels": {"astra/platform": config["cluster_name"]}},
             "spec": {
                 "parentRefs": [{"name": "astra-public", "namespace": "platform-system", "sectionName": "https"}],
                 "hostnames": [config["hosts"][service]],
-                "rules": [rule],
+                "rules": rules,
             },
         })
     return resources
