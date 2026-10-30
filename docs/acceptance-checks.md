@@ -8,7 +8,6 @@ For the CareCart example, the addresses are:
 
 - **LiteLLM:** https://litellm.afriqhome.com
 - **Argo CD:** https://argocd.afriqhome.com
-- **MLflow:** https://mlflow.afriqhome.com
 - **Grafana:** https://grafana.afriqhome.com
 - **Kubernetes assistant:** https://k8sassistant.afriqhome.com
 - **AWS assistant:** https://awsassistant.afriqhome.com
@@ -35,7 +34,7 @@ Check the model name, token usage and the application or team that owns the requ
 
 ## Follow an assistant request in MLflow
 
-Open the Kubernetes assistant and ask it to explain a synthetic Pending pod in its permitted namespace. Open MLflow, sign in and follow the redirect to the managed UI. Find the new assistant trace.
+Open the Kubernetes assistant and ask it to explain a synthetic Pending pod in its permitted namespace. In the AWS console, open SageMaker AI, enter Studio, choose Applications > MLflow, then choose Open MLflow for your tracking server. Find the new assistant trace.
 
 Open the model call, tool call, tool result and final answer. Confirm that the answer reflects the returned tool data. Open the prompt's numeric version and the evaluation run linked to the model release. Inspect the recorded scores, individual results and permitted artifacts. Add feedback to the trace using the configured reviewer access.
 

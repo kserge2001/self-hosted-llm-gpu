@@ -10,13 +10,13 @@ Start by [importing the starter into your own GitHub account](docs/repository-se
 
 Python implementations are supplied as repository files. Kubernetes manifests and Helm values are under k8s/.
 
-Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute per application, backed by an AWS Application Load Balancer. Argo CD, Grafana and LiteLLM open their own logins directly over HTTPS. The other browser routes use Cognito; the inference route uses application keys. See the validation status for completed live checks.
+Routing uses Kubernetes Gateway API: a shared HTTPS Gateway and one HTTPRoute per application, backed by an AWS Application Load Balancer. Argo CD, Grafana and LiteLLM open their own logins directly over HTTPS. The assistant browser routes use Cognito; the inference route uses application keys. See the validation status for completed live checks.
 
-The temporary test is being cleaned up. Its URLs are no longer a live demonstration. [Open managed MLflow with your AWS permissions](docs/mlflow-access.md) when your own tracking server is running.
+The temporary test's compute and network resources have been removed. Its URLs are no longer a live demonstration. [Open managed MLflow through SageMaker Studio](docs/mlflow-access.md) when your own tracking server and Studio access are available.
 
 Use the focused guides for [application onboarding](docs/application-onboarding.md), [platform verification](docs/acceptance-checks.md), [troubleshooting and recovery](docs/troubleshooting-recovery.md), and [cleanup](docs/cleanup.md).
 
-For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring, the MLflow launcher and LiteLLM; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.
+For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring and LiteLLM; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.
 
 The live-tested [model intake and scanning steps](docs/model-intake-and-scanning.md) now upload verified files into quarantine and check GuardDuty events for their exact S3 versions. The pinned runtime failed its vulnerability check and remains unapproved; see the validation status before deployment.
 

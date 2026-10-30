@@ -18,12 +18,6 @@ argocd:
   protocol: HTTPS
   path: /
   health_path: /healthz
-mlflow:
-  namespace: mlflow
-  service: mlflow-launcher
-  port: 8000
-  path: /
-  health_path: /health
 k8s_assistant:
   namespace: k8s-assistant
   service: k8s-assistant

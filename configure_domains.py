@@ -54,7 +54,7 @@ def validate(config):
     """Check the hostnames, network allowlist, certificate and sign-in settings."""
     if set(config["hosts"]) != set(catalog()):
         raise ValueError(
-            "Terraform hosts must contain exactly the seven supported services"
+            "Terraform hosts must contain exactly the six supported services"
         )
     domain = config["domain_name"]
     label = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"

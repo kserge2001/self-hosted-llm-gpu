@@ -31,7 +31,7 @@ variable "subdomains" {
   default     = {}
   validation {
     condition = alltrue([
-      for key, label in var.subdomains : contains(["inference", "litellm", "argocd", "mlflow", "k8s_assistant", "aws_assistant", "grafana"], key) && can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", label)) && length(label) <= 63
+      for key, label in var.subdomains : contains(["inference", "litellm", "argocd", "k8s_assistant", "aws_assistant", "grafana"], key) && can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", label)) && length(label) <= 63
     ])
     error_message = "Use a known service key and a single DNS label covered by the wildcard certificate."
   }
@@ -89,7 +89,6 @@ locals {
     inference     = "astra"
     litellm       = "litellm"
     argocd        = "argocd"
-    mlflow        = "mlflow"
     k8s_assistant = "k8sassistant"
     aws_assistant = "awsassistant"
     grafana       = "grafana"

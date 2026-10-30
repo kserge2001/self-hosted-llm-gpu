@@ -10,7 +10,6 @@ subdomains = {
   inference     = "astra"
   litellm       = "litellm"
   argocd        = "argocd"
-  mlflow        = "mlflow"
   k8s_assistant = "k8sassistant"
   aws_assistant = "awsassistant"
   grafana       = "grafana"
@@ -18,15 +17,15 @@ subdomains = {
 create_cognito = true
 ```
 
-For your implementation, replace the domain with your own. The resulting addresses are astra, litellm, argocd, mlflow, k8sassistant, awsassistant and grafana under that domain. The Astra API uses /v1. The LiteLLM dashboard uses /ui. Both reach the same gateway Service, while vLLM remains private.
+For your implementation, replace the domain with your own. The resulting addresses are astra, litellm, argocd, k8sassistant, awsassistant and grafana under that domain. The Astra API uses /v1. The LiteLLM dashboard uses /ui. Both reach the same gateway Service, while vLLM remains private.
 
 Set public_client_cidrs to your approved public egress addresses. Terraform also includes the platform's NAT addresses for applications calling from private subnets. Set acm_certificate_arn to use a particular existing certificate; otherwise Terraform finds the issued wildcard. The certificate stays in ACM. This ALB listener does not need cert-manager.
 
 Argo CD, Grafana and LiteLLM open their own logins directly over HTTPS. They do not redirect through Cognito.
 
-Terraform creates a Cognito user pool, a client and a sign-in domain for the remaining three browser entry points. Public self-registration is disabled. Create approved users through Cognito administration; do not put their passwords in Terraform or Git. Application permissions inside LiteLLM still apply. The model API uses its application key.
+Terraform creates a Cognito user pool, a client and a sign-in domain for the two assistant browser entry points. Public self-registration is disabled. Create approved users through Cognito administration; do not put their passwords in Terraform or Git. Application permissions inside LiteLLM still apply. The model API uses its application key.
 
-MLflow opens through the configured mlflow hostname, then redirects the authorized browser to SageMaker's managed UI. The browser address changes after that redirect.
+Open managed MLflow through SageMaker Studio from the AWS console. Follow [the MLflow access steps](mlflow-access.md). MLflow is not part of this DNS, Gateway API or Cognito setup.
 
 ## B. Generate and apply the routes
 
@@ -83,7 +82,7 @@ kubectl --context "$CLUSTER_CONTEXT" -n external-dns logs deployment/external-dn
 
 Run the short OpenAI SDK example in Application Onboarding with your application key. Expect a real answer over verified HTTPS. Check that the Gateway is Programmed, the HTTPRoutes are Accepted with ResolvedRefs, and each published hostname has the expected ALB address in Route 53 with no ExternalDNS ownership error.
 
-Open each browser hostname in a private window. Argo CD, Grafana and LiteLLM must show their own login pages without a Cognito redirect. The other browser routes require Cognito first. After signing in, verify the intended application; for MLflow, verify the redirect to the managed UI. A generated YAML file, DNS record or HTTP redirect alone does not prove the application works.
+Open each browser hostname in a private window. Argo CD, Grafana and LiteLLM must show their own login pages without a Cognito redirect. The other browser routes require Cognito first. After signing in, verify the intended application. A generated YAML file, DNS record or HTTP redirect alone does not prove the application works.
 
 If DNS is missing, inspect ExternalDNS logs and its IAM role. If a target is unhealthy, check the Service port, ready endpoints and health path. If Cognito rejects a callback, compare the URL with domain_configuration.browser_callback_urls. Do not disable TLS or sign-in to make a test pass.
 

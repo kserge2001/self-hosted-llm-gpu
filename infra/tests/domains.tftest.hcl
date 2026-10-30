@@ -45,9 +45,9 @@ variables {
 
 run "partial_override_and_cognito_callbacks" {
   command = plan
-  variables { subdomains = { mlflow = "models" } }
+  variables { subdomains = { k8s_assistant = "help" } }
   assert {
-    condition     = output.domain_configuration.hosts.mlflow == "models.example.com" && output.domain_configuration.hosts.argocd == "argocd.example.com" && length(output.domain_configuration.hosts) == 7
+    condition     = output.domain_configuration.hosts.k8s_assistant == "help.example.com" && output.domain_configuration.hosts.argocd == "argocd.example.com" && length(output.domain_configuration.hosts) == 6
     error_message = "Partial overrides must retain every other hostname."
   }
   assert {
@@ -55,19 +55,19 @@ run "partial_override_and_cognito_callbacks" {
     error_message = "Include the workstation and VPC NAT addresses."
   }
   assert {
-    condition     = contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://models.example.com/oauth2/idpresponse") && length(aws_cognito_user_pool_client.dashboards[0].callback_urls) == 3 && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://argocd.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://grafana.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://litellm.example.com/oauth2/idpresponse")
+    condition     = contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://help.example.com/oauth2/idpresponse") && length(aws_cognito_user_pool_client.dashboards[0].callback_urls) == 2 && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://argocd.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://grafana.example.com/oauth2/idpresponse") && !contains(aws_cognito_user_pool_client.dashboards[0].callback_urls, "https://litellm.example.com/oauth2/idpresponse")
     error_message = "Browser callbacks must exclude the model API and dashboards with their own login."
   }
 }
 
 run "reject_duplicate_default_label" {
   command = plan
-  variables { subdomains = { mlflow = "argocd" } }
+  variables { subdomains = { k8s_assistant = "argocd" } }
   expect_failures = [output.domain_configuration]
 }
 
 run "reject_nested_label" {
   command = plan
-  variables { subdomains = { mlflow = "models.internal" } }
+  variables { subdomains = { k8s_assistant = "help.internal" } }
   expect_failures = [var.subdomains]
 }

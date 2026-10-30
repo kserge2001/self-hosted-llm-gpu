@@ -2,7 +2,7 @@
 
 Updated October 29, 2026. Use the latest commit on e2e/astra for independent testing. The test account's credentials, Terraform state and private configuration are not included.
 
-The live test was stopped at the owner's request and cleanup is in progress. This is not an end-to-end verified lab. The results below describe what was observed before teardown; they do not mean the temporary addresses remain available.
+The live test was stopped at the owner's request. AWS verification confirmed that the temporary EKS cluster, instances, RDS, Redis, MLflow, load balancer, NAT gateways and VPC are gone. The final database snapshot, monitoring snapshots, evidence/model buckets, image repositories and storage encryption key were retained. Storage charges can continue. This is not an end-to-end verified lab. The results below describe observations before teardown; the temporary addresses are no longer available.
 
 ## A. Verified so far
 
@@ -14,7 +14,7 @@ The live test was stopped at the owner's request and cleanup is in progress. Thi
 - The Argo CD Gateway API route was accepted, the ALB target became healthy, and ExternalDNS created the records. The updated route opens Argo CD's own login directly over HTTPS, without Cognito. A fresh request returned HTTP 200 and the browser displayed the native login. Signing in to administer Argo CD is still pending.
 - The EBS CSI add-on became Active. Argo CD deployed Grafana, Prometheus and Alertmanager; all their pods became Ready and the Grafana and Prometheus volumes became Bound. Grafana DNS, HTTPS and administrator sign-in passed. Its route sends an unauthenticated request directly to Grafana's own /login page, without Cognito. DCGM exporter is running on both GPU workers, and Prometheus returned a separate utilization series for each NVIDIA L40S. Model workload measurements are still pending.
 - LiteLLM's initializer completed, External Secrets synchronized its configuration, and both gateway replicas became Ready in separate zones. Native browser login passed without Cognito. The public model API rejected a request without a key with HTTP 401. Argo CD reports the corrected gateway deployment Healthy and Synced.
-- The managed MLflow server is Created and Active. Its launcher reached the managed UI after sign-in. A live API test created a run, metric and artifact and read the artifact back. Two prompt versions were visible in the browser. These were connectivity tests, not model evaluations.
+- The managed MLflow server reached Created and Active. Its former launcher reached the managed UI after sign-in. A live API test created a run, metric and artifact and read the artifact back. Two prompt versions were visible in the browser. These were connectivity tests, not model evaluations.
 - The pinned Qwen candidate was downloaded and its publisher hashes verified. The intake Job completed and wrote a versioned quarantine manifest. The scan gate found clean GuardDuty events for all 76 exact artifact versions. The model is still unapproved and has not been served.
 
 ## Current release blocker
@@ -56,9 +56,10 @@ helm upgrade --install nvidia-device-plugin nvdp/nvidia-device-plugin \
 - The consolidated bootstrap script from a fresh student account. Its individual controller installation steps and the Argo CD storage/monitoring definitions were exercised live; the full student path still needs its own run.
 - All remaining application secret values and their synchronization.
 - A complete provisioned SageMaker scanning, evaluation and promotion pipeline. The repository currently includes the trigger and supporting scripts, not the complete pipeline definition.
-- Full assistant traces, tool spans, feedback and release lineage in MLflow remain unverified. Removing Cognito from the managed MLflow browser entry point requires an agreed replacement access flow.
+- Full assistant traces, tool spans, feedback and release lineage in MLflow remain unverified. The selected browser access is now SageMaker Studio from the AWS console. Studio user access and that console walkthrough remain unverified.
 - The complete container build and Argo CD deployment configuration for the model and assistants.
 - Authenticated model responses, assistant tool calls, shared gateway limits, monitoring, alerts and recovery exercises.
-- Final cleanup of this test run.
 
 Start an independent review with the repository and Terraform foundation. Use your own operator role, private connectivity, domain, certificate and AWS credentials. Keep the local state for cleanup. Stop at any missing prerequisite and record the exact failing step; do not interpret a generated file or a passing unit test as evidence that a service was deployed.
+
+MLflow has been removed from the custom hostname catalog, Cognito callbacks and Kubernetes deployment definitions. The managed tracking server and application tracking integration remain.

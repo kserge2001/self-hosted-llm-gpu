@@ -15,8 +15,6 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: gateway
     - server: https://kubernetes.default.svc
-      namespace: mlflow
-    - server: https://kubernetes.default.svc
       namespace: monitoring
     - server: https://kubernetes.default.svc
       namespace: kube-system

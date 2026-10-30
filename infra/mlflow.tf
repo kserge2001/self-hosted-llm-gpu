@@ -34,41 +34,10 @@ resource "aws_sagemaker_mlflow_tracking_server" "astra" {
   depends_on                   = [aws_iam_role_policy.mlflow, aws_s3_bucket_server_side_encryption_configuration.data]
 }
 
-resource "aws_iam_role" "mlflow_launcher" {
-  name = "${var.name}-mlflow-launcher"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17", Statement = [{
-      Effect    = "Allow", Action = "sts:AssumeRoleWithWebIdentity"
-      Principal = { Federated = module.eks.oidc_provider_arn }
-      Condition = { StringEquals = {
-        "${local.dns_oidc_issuer}:sub" = "system:serviceaccount:mlflow:mlflow-launcher"
-        "${local.dns_oidc_issuer}:aud" = "sts.amazonaws.com"
-      } }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "mlflow_launcher" {
-  role = aws_iam_role.mlflow_launcher.id
-  name = "open-one-tracking-server"
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
-    {
-      Effect = "Allow", Action = [
-        "sagemaker:CreatePresignedMlflowTrackingServerUrl",
-        "sagemaker-mlflow:Get*", "sagemaker-mlflow:Search*", "sagemaker-mlflow:List*"
-      ]
-      Resource = aws_sagemaker_mlflow_tracking_server.astra.arn
-    },
-    # AccessUI does not support resource-level permissions. Data reads above do.
-    { Effect = "Allow", Action = "sagemaker-mlflow:AccessUI", Resource = "*" }
-  ] })
-}
-
 output "mlflow" {
   value = {
-    name              = aws_sagemaker_mlflow_tracking_server.astra.tracking_server_name
-    version           = aws_sagemaker_mlflow_tracking_server.astra.mlflow_version
-    arn               = aws_sagemaker_mlflow_tracking_server.astra.arn
-    launcher_role_arn = aws_iam_role.mlflow_launcher.arn
+    name    = aws_sagemaker_mlflow_tracking_server.astra.tracking_server_name
+    version = aws_sagemaker_mlflow_tracking_server.astra.mlflow_version
+    arn     = aws_sagemaker_mlflow_tracking_server.astra.arn
   }
 }

@@ -1,16 +1,14 @@
-# Open managed MLflow
+# Open MLflow from the AWS console
 
-SageMaker-managed MLflow uses AWS permissions. It has no separate MLflow username or password.
+Use your approved AWS account in us-east-1. You need SageMaker Studio access and permission to open the managed MLflow tracking server.
 
-Use your configured AWS CLI to create a temporary sign-in link. Replace the tracking server name with your Terraform output, then open the returned URL in your browser.
+1. Open Amazon SageMaker AI in the AWS console.
+2. Open Studio using your user profile.
+3. In Studio, choose Applications, then MLflow.
+4. Find your tracking server in MLflow Tracking Servers. Start it if its status is Off.
+5. Open its three-dot menu and choose Open MLflow.
+6. In the managed MLflow page, inspect your experiments, prompt versions and traces.
 
-```bash
-aws sagemaker create-presigned-mlflow-tracking-server-url \
-  --region us-east-1 \
-  --tracking-server-name YOUR_TRACKING_SERVER_NAME \
-  --query AuthorizedUrl --output text
-```
+AWS opens the managed UI in a new tab. There is no custom MLflow hostname, Kubernetes launcher or Cognito login in this path.
 
-The calling AWS identity must have permission to create the link and use the tracking server UI. Treat the returned URL as a temporary credential. The server must still exist and be running.
-
-The custom MLflow domain currently uses the authenticated launcher. Changing that entry point is separate from opening the managed UI with AWS credentials.
+The starter creates the tracking server, but does not provision SageMaker Studio user access. Arrange that access before this walkthrough. The console steps are verified against [AWS documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/mlflow-launch-ui.html); they were not exercised in the temporary test account.

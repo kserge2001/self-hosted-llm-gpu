@@ -15,7 +15,6 @@ def fixture(domain="example.com"):
         "inference": "astra",
         "litellm": "litellm",
         "argocd": "argocd",
-        "mlflow": "mlflow",
         "k8s_assistant": "k8sassistant",
         "aws_assistant": "awsassistant",
         "grafana": "grafana",
@@ -70,8 +69,8 @@ class DomainTests(unittest.TestCase):
 
     def test_custom_label_propagates_without_changing_other_services(self):
         config = fixture()
-        config["hosts"]["mlflow"] = "models.example.com"
-        resources = domains.build_routes(config, ["mlflow", "argocd"])
+        config["hosts"]["k8s_assistant"] = "models.example.com"
+        resources = domains.build_routes(config, ["k8s_assistant", "argocd"])
         routes = [r for r in resources if r["kind"] == "HTTPRoute"]
         self.assertEqual({r["spec"]["hostnames"][0] for r in routes}, {"models.example.com", "argocd.example.com"})
 
@@ -105,7 +104,7 @@ class DomainTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "output"
             with self.assertRaisesRegex(ValueError, "browser_auth"):
-                domains.render_bundle(config, ["mlflow"], output)
+                domains.render_bundle(config, ["k8s_assistant"], output)
             self.assertFalse(output.exists())
 
     def test_rejects_duplicate_nested_or_foreign_hosts(self):
@@ -116,7 +115,7 @@ class DomainTests(unittest.TestCase):
             "bad\n.example.com",
         ):
             config = fixture()
-            config["hosts"]["mlflow"] = host
+            config["hosts"]["k8s_assistant"] = host
             with self.subTest(host=host), self.assertRaises(ValueError):
                 domains.validate(config)
 
@@ -140,7 +139,7 @@ class DomainTests(unittest.TestCase):
             {"Status": "ISSUED", "DomainName": "*.other.com"},
         ):
             with self.assertRaises(ValueError):
-                domains.assert_certificate(config, bad, ["mlflow"])
+                domains.assert_certificate(config, bad, ["k8s_assistant"])
 
     def test_wrong_cluster_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "does not match"):

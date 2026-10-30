@@ -135,9 +135,9 @@ kubectl auth can-i delete pods -n synthetic --as=system:serviceaccount:k8s-assis
 
 **Pass:** results are yes, no and no. Also request the forbidden namespace through the actual assistant and confirm it cannot retrieve that data. Under the AWS assistant's identity, use EC2 terminate-instances with --dry-run against a disposable test instance. UnauthorizedOperation is the expected denial; DryRunOperation means the role has termination permission and fails the check. Never omit --dry-run. Save the denied results and correct any excessive permission.
 
-- [ ] **13. Verify MLflow browser access.** Open the MLflow URL from Terraform domain_configuration in a private browser window. Attempt access before sign-in, then sign in with an approved identity. Repeat with a test identity without MLflow access.
+- [ ] **13. Verify MLflow browser access.** Sign in to the AWS console with an approved identity. Open SageMaker AI > Studio > Applications > MLflow, then choose Open MLflow for the tracking server. Repeat with a test identity without MLflow permissions.
 
-**Pass:** access requires sign-in, the approved identity reaches the managed MLflow UI through the launcher, and the unauthorized identity is denied. Save redacted screenshots. Do not save the temporary signed redirect URL.
+**Pass:** access requires sign-in, the approved AWS identity reaches the managed MLflow UI, and the unauthorized identity is denied. Save redacted screenshots. Do not save the temporary signed redirect URL.
 
 - [ ] **14. Verify prompt versions.** Open the Prompt Registry in the managed MLflow UI. Open the prompt used by each assistant and compare its numeric version and content hash with the application's release record.
 
