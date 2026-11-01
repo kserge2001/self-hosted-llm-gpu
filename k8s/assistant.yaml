@@ -40,6 +40,9 @@ spec:
         runAsUser: 10001
         runAsGroup: 10001
         fsGroup: 10001
+      volumes:
+        - name: prompt
+          configMap: {name: "${PROMPT_CONFIG}"}
       containers:
         - name: assistant
           image: ${ASSISTANT_IMAGE}
@@ -48,6 +51,8 @@ spec:
             capabilities: {drop: [ALL]}
           ports:
             - {name: http, containerPort: 8000}
+          volumeMounts:
+            - {name: prompt, mountPath: /app/prompt, readOnly: true}
           envFrom:
             - secretRef: {name: "${ASSISTANT_NAME}-env"}
           env:
@@ -57,8 +62,10 @@ spec:
             - {name: ASTRA_RELEASE_ID, value: "${RELEASE_ID}"}
             - {name: PROMPT_URI, value: "${PROMPT_URI}"}
             - {name: PROMPT_SHA256, value: "${PROMPT_SHA256}"}
+            - {name: PROMPT_FILE, value: /app/prompt/prompt.txt}
             - {name: EVALSET_SHA256, value: "${EVALSET_SHA256}"}
             - {name: MLFLOW_TRACKING_ARN, value: "${MLFLOW_TRACKING_ARN}"}
+            - {name: MLFLOW_EXPERIMENT_ID, value: "${MLFLOW_EXPERIMENT_ID}"}
             - {name: OPENAI_BASE_URL, value: "https://${ASTRA_HOST}/v1"}
             - {name: ASTRA_HOST, value: "${ASTRA_HOST}"}
             - {name: EXPECTED_ALB_ARN, value: "${EXPECTED_ALB_ARN}"}

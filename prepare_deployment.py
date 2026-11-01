@@ -45,10 +45,22 @@ def prepare(s3, settings, output):
             raise ValueError("Pin a numeric prompt version")
         if not re.fullmatch(r"[a-f0-9]{64}", prompt["sha256"]):
             raise ValueError("Pin the prompt content hash")
+        if (not isinstance(prompt.get("template"), str) or not prompt["template"]
+                or hashlib.sha256(prompt["template"].encode()).hexdigest() != prompt["sha256"]):
+            raise ValueError("Bundled prompt differs from the reviewed content hash")
+        experiment_id = str(prompt.get("experiment_id", ""))
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", experiment_id):
+            raise ValueError("Pin the MLflow experiment identity")
+        prompt_config = name + "-prompt-" + prompt["sha256"][:16]
         values = dict(common, ASSISTANT_NAME=name, ASSISTANT_KIND=kind,
                       ASSISTANT_ROLE_ARN=settings["assistant_roles"][name],
-                      PROMPT_URI=prompt["uri"], PROMPT_SHA256=prompt["sha256"])
-        documents[f"assistants/{name}.yaml"] = render((ROOT / "k8s/assistant.yaml").read_text(), values)
+                      PROMPT_URI=prompt["uri"], PROMPT_SHA256=prompt["sha256"],
+                      PROMPT_CONFIG=prompt_config, MLFLOW_EXPERIMENT_ID=experiment_id)
+        documents[f"assistants/{name}.yaml"] = (
+            render((ROOT / "k8s/assistant.yaml").read_text(), values)
+            + "\n---\n" + yaml.safe_dump({"apiVersion": "v1", "kind": "ConfigMap",
+                "metadata": {"name": prompt_config, "namespace": name}, "immutable": True,
+                "data": {"prompt.txt": prompt["template"]}}, sort_keys=False))
     documents["assistants/tool-permissions.yaml"] = (
         "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: synthetic\n---\n"
         + (ROOT / "k8s/assistant-rbac.yaml").read_text())

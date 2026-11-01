@@ -32,9 +32,11 @@ async def lifespan(app):
         raise ValueError("Pin the application image digest")
     mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_ARN"])
     mlflow.set_registry_uri(os.environ["MLFLOW_TRACKING_ARN"])
-    mlflow.set_experiment("astra-" + kind + "-assistant")
-    prompt = mlflow.load_prompt(os.environ["PROMPT_URI"])
-    app.state.prompt = prompt.template
+    # The release bundles the reviewed prompt and experiment identity. Starting
+    # an existing release must not call the registry or require MLflow uptime.
+    if not os.environ.get("MLFLOW_EXPERIMENT_ID"):
+        raise ValueError("Missing release experiment identity")
+    app.state.prompt = Path(os.environ["PROMPT_FILE"]).read_bytes().decode("utf-8")
     if hashlib.sha256(app.state.prompt.encode()).hexdigest() != os.environ["PROMPT_SHA256"]:
         raise ValueError("Prompt content differs from the reviewed release")
     if kind == "kubernetes":

@@ -40,7 +40,7 @@ resource "aws_iam_role_policy" "assistant" {
   policy = jsonencode({ Version = "2012-10-17", Statement = concat([
     { Effect = "Allow", Action = ["sagemaker-mlflow:GetExperimentByName", "sagemaker-mlflow:GetExperiment", "sagemaker-mlflow:CreateExperiment",
       "sagemaker-mlflow:GetRegisteredModel", "sagemaker-mlflow:GetModelVersion", "sagemaker-mlflow:StartTrace", "sagemaker-mlflow:EndTrace",
-      "sagemaker-mlflow:GetTraceInfo", "sagemaker-mlflow:SetTraceTag"], Resource = aws_sagemaker_mlflow_tracking_server.astra.arn },
+    "sagemaker-mlflow:GetTraceInfo", "sagemaker-mlflow:SetTraceTag"], Resource = aws_sagemaker_mlflow_tracking_server.astra.arn },
     { Effect = "Allow", Action = ["s3:PutObject", "s3:GetObject"], Resource = "${aws_s3_bucket.data["mlflow"].arn}/artifacts/*" },
     { Effect = "Allow", Action = ["kms:Decrypt", "kms:GenerateDataKey"], Resource = aws_kms_key.platform.arn,
     Condition = { StringEquals = { "kms:ViaService" = "s3.us-east-1.amazonaws.com" } } }

@@ -32,8 +32,9 @@ variable "gpu_instance_type_overrides" {
   default     = {}
 }
 variable "gpu_enabled" {
-  type    = bool
-  default = true
+  description = "Enable serving GPUs only after the release, images and rehearsal prerequisites are ready."
+  type        = bool
+  default     = false
 }
 variable "cpu_ami_release" {
   type    = string

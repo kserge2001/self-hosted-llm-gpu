@@ -36,7 +36,7 @@ Check the model name, token usage and the application or team that owns the requ
 
 Open the Kubernetes assistant and ask it to explain a synthetic Pending pod in its permitted namespace. In the AWS console, open SageMaker AI, enter Studio, choose Applications > MLflow, then choose Open MLflow for your tracking server. Find the new assistant trace.
 
-Open the model and tool spans and inspect their order, timing, status and release identifiers. The application records trace metadata rather than raw questions, tool results or answers. Compare the answer in the assistant UI with the synthetic Kubernetes state. Open the prompt's numeric version and the evaluation run linked to the model release. Inspect the recorded scores, individual results and permitted artifacts. Add feedback using the configured reviewer access if the selected managed MLflow version supports that view; leave unsupported requirements explicitly open.
+Open the model and tool spans and inspect their order, timing, status and release identifiers. The application records trace metadata rather than raw questions, tool results or answers. Compare the answer in the assistant UI with the synthetic Kubernetes state. Open the prompt's numeric version and the evaluation run linked to the model release. Inspect the recorded scores, individual results and permitted artifacts.
 
 Repeat with the AWS assistant using a read-only infrastructure question. Confirm that it has its own trace and application usage record.
 
@@ -50,10 +50,10 @@ In the AWS console, open CloudWatch for the cluster and managed services. Check 
 
 **Expected result:** the dashboards show live measurements. GPU utilization can fall between short requests; a quiet graph is not by itself a fault. Empty or stale graphs need investigation.
 
-## Record the result and move to recovery
+## Record the completed request flow
 
 Record the deployed Git revision, model release, successful application request and MLflow trace. Note any missing page, unhealthy resource or failed request and fix it before handing over the service.
 
 This walkthrough demonstrates the running platform. Use the checks in each build step to verify permissions and release controls; opening a dashboard alone does not prove those controls work. The detailed engineering checks remain in the repository for deeper validation.
 
-Continue to Troubleshooting and Recovery to practise finding and fixing a failure. Complete Cleanup when the exercise is finished.
+Use Troubleshooting and Recovery when a step fails. Once the request flow, essential access checks and live monitoring pass, complete Cleanup. Capacity tuning, database-restore drills and repeated rebuilds are outside this first walkthrough.

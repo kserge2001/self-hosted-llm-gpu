@@ -4,6 +4,8 @@
 
 Terraform creates the AWS resources. Configure kubeconfig, then run bootstrap_cluster.sh from the repository root with the Python environment active. It installs the controllers and Argo CD needed to start GitOps. The bootstrap uses pinned charts and checks their downloaded fingerprints.
 
+For a private operator that does not hold Terraform state, save `terraform -chdir=infra output -json > foundation-outputs.json` on the provisioning workstation and transfer that outputs file through your approved private path. Set `FOUNDATION_OUTPUTS_FILE` to its location before running the bootstrap. This uses the same installation path without copying the state or database credentials to the operator.
+
 The public ALB uses ACM. Cert-manager issues the load-balancer controller's internal certificates. External Secrets Operator synchronizes application credentials from AWS Secrets Manager using a separate, narrowly scoped role for each namespace.
 
 ## B. Register your repository

@@ -1,7 +1,16 @@
-FROM python:3.13-slim-bookworm@sha256:281d39ff02e3b389401586134ff9e6572954687822a58055ec07a60ded4e0b7f
+# CPython from the official Python image; patched Ubuntu runtime libraries.
+# Keep installation tools only until the hash-locked dependencies are installed.
+FROM python:3.13-slim-trixie@sha256:2d44738ebf4ce5f63b9d9ea871e9c7cfdc0426f7b0c97cac915fd88ded1d86bb AS python
+FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
+ENV PATH=/usr/local/bin:$PATH
+RUN apt-get update --error-on=any && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends ca-certificates libbz2-1.0 libffi8 libgdbm6t64 libgdbm-compat4t64 liblzma5 libncursesw6 libreadline8t64 libsqlite3-0 libssl3t64 libuuid1 zlib1g libzstd1 libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=python /usr/local/ /usr/local/
+RUN ldconfig && python -c "import ssl, sqlite3, bz2, lzma, ctypes, readline, curses, uuid, dbm.gnu"
 WORKDIR /app
 COPY apps/bootstrap-requirements.lock /app/requirements.lock
-RUN pip install --no-cache-dir --require-hashes -r /app/requirements.lock && pip check
+RUN pip install --no-cache-dir --require-hashes -r /app/requirements.lock && pip check && python -m pip uninstall -y pip
 COPY artifact_loader.py /app/
 USER 10001:10001
 ENTRYPOINT ["python", "/app/artifact_loader.py"]

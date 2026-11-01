@@ -2,6 +2,8 @@
 
 CareCart's AI Platform Engineering team is researching, designing and building an internal inference platform on AWS. Its internal model is Astra.
 
+The guide builds a working first iteration with two model replicas and two gateway replicas across two Availability Zones. Follow the end-to-end request flow, verify the essential controls and observe the service. Real usage will inform later capacity and operating decisions.
+
 This starter provides the AWS foundation, versioned model intake, a SageMaker validation/evaluation pipeline, approval-gated publication, and model/assistant deployment code. Follow the [lab in Kodelumi](https://kodelumi.com/w/49_OMkQYNp9zuC57) for the full build.
 
 Classroom-readiness changes are being prepared from the e2e/astra branch. Read [what has been tested and what is still missing](docs/validation-status.md) before provisioning; this is not yet a complete, verified end-to-end release. The new [model pipeline](docs/model-release-pipeline.md) and [serving deployment](docs/serving-deployment.md) guides describe implemented code that still requires a live rehearsal.
@@ -16,7 +18,7 @@ The temporary test's compute and network resources have been removed. Its URLs a
 
 Use the focused guides for [application onboarding](docs/application-onboarding.md), [platform verification](docs/acceptance-checks.md), [troubleshooting and recovery](docs/troubleshooting-recovery.md), and [cleanup](docs/cleanup.md).
 
-For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring and LiteLLM; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The complete model pipeline definition is still being implemented.
+For cluster setup, see [Argo CD deployment](docs/gitops.md). The argocd directory contains Application definitions for storage, monitoring, LiteLLM, the model and assistants; their manifests and Helm values remain under k8s. Model CI/CD instructions are in sections B and E below and in Model Release Pipeline in Kodelumi. The implemented pipeline still requires a complete live rehearsal.
 
 The live-tested [model intake and scanning steps](docs/model-intake-and-scanning.md) now upload verified files into quarantine and check GuardDuty events for their exact S3 versions. The pinned runtime failed its vulnerability check and remains unapproved; see the validation status before deployment.
 
@@ -24,7 +26,7 @@ The live-tested [model intake and scanning steps](docs/model-intake-and-scanning
 
 ![AWS foundation](docs/aws-foundation.png)
 
-The editable diagram is docs/aws-foundation.drawio. The first Terraform apply creates one m6i.large CPU worker and one GPU worker per Availability Zone. Verify the workers and GPU access before moving to model release and deployment. RDS and Redis are separate managed services in private data subnets; MLflow is managed by SageMaker.
+The editable diagram is docs/aws-foundation.drawio. The initial Terraform configuration keeps serving GPUs disabled while creating one m6i.large CPU worker per Availability Zone and the shared services. Complete image checks, candidate evaluation and release preparation before enabling the two GPU workers for serving. RDS and Redis are separate managed services in private data subnets; MLflow is managed by SageMaker. CPU and shared services still incur charges while running.
 
 Terraform state stays locally in infra/terraform.tfstate. Keep it and its backup through cleanup. State and plan files can contain credentials and are excluded from Git.
 

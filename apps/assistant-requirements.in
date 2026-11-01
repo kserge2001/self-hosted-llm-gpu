@@ -1,0 +1,13 @@
+# The application is an MLflow client; SageMaker hosts the tracking server.
+# Do not install the full MLflow server or unused data-science/model flavors.
+boto3==1.43.114
+fastapi==0.135.0
+uvicorn==0.54.0
+openai==3.41.0
+mlflow-skinny==3.0.0
+sagemaker-mlflow==0.5.0
+kubernetes==37.0.1
+PyJWT[crypto]==2.15.1
+# Match the tracing processor used by the managed MLflow 3.0 client.
+opentelemetry-api==1.34.1
+opentelemetry-sdk==1.34.1

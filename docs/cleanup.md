@@ -19,11 +19,11 @@ kubectl get gateway,httproute -A
 kubectl get pvc -A
 aws sagemaker list-processing-jobs --region us-east-1 --status-equals InProgress
 aws sagemaker list-mlflow-tracking-servers --region us-east-1
-terraform plan -destroy -out=teardown.plan
-terraform show teardown.plan
+terraform -chdir=infra plan -destroy -out=teardown.plan
+terraform -chdir=infra show teardown.plan
 ```
 
-The last two commands create and display a deletion plan. After checking the resources to keep, apply the saved plan with terraform apply teardown.plan. Keep the local state file until Terraform finishes and you have checked for remaining resources. Do not delete the state file as a way to remove AWS resources.
+The last two commands create and display a deletion plan. After checking the resources to keep, apply the saved plan with terraform -chdir=infra apply teardown.plan. Keep the local state file until Terraform finishes and you have checked for remaining resources. Do not delete the state file as a way to remove AWS resources.
 
 Before deleting RDS, set database_deletion_protection to false in your private Terraform inputs and apply that change. The default retains a final database snapshot. Set retain_final_database_snapshot to false only when the database contains disposable test data and its removal is approved. A retained encrypted snapshot requires its KMS key to remain usable.
 

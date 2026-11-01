@@ -1,5 +1,7 @@
 # Optional engineering checks
 
+This reference is for later operational work. It is outside the first end-to-end student walkthrough. Complete [Platform Verification](acceptance-checks.md) and [Cleanup](cleanup.md) for the initial build; select deeper checks later when the company's operating requirements call for them.
+
 ## Prepare the verification record
 
 Run these checks after deploying the relevant components. Use your deployed names and the release record from the build. Keep an item unchecked until its expected result is observed. For each result, record the date, release ID, command or UI action, PASS or FAIL, and an evidence file or trace ID.
@@ -165,11 +167,11 @@ kubectl auth can-i delete pods -n synthetic --as=system:serviceaccount:k8s-assis
 
 **Pass:** the alert reaches the intended operational destination with the correct service and severity, then resolves. Record its firing, receipt and resolution times. Use a designated test destination for the exercise.
 
-- [ ] **20. Verify rollback.** Follow Troubleshooting and Recovery to deploy a deliberately failing candidate in staging. Restore the saved model, application and prompt combination.
+- [ ] **20. Verify rollback.** For a separately planned advanced exercise, deploy a deliberately failing candidate in staging. Restore the saved model, application and prompt combination.
 
 **Pass:** the restored versions match the prior approved record, the authenticated request passes and both assistant regression tests pass. Save the failed rollout event, restored release identity and test results. A successful rollout command alone is insufficient.
 
-- [ ] **21. Measure failure recovery.** Perform the four separate exercises in Troubleshooting and Recovery: one model pod loss, one gateway pod loss, Redis failover and RDS failover. Run a bounded request probe during each exercise.
+- [ ] **21. Measure failure recovery.** In a separately planned recovery exercise, test: one model pod loss, one gateway pod loss, Redis failover and RDS failover. Run a bounded request probe during each exercise.
 
 **Pass:** each exercise records the injected failure time, failed/interrupted requests, recovery time and a successful final authenticated request. Compare recovery with the agreed target. Record streams that fail; do not claim they transfer to another replica.
 

@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run from the repository root after Terraform and kubeconfig setup.
-export CLUSTER_NAME=$(terraform -chdir=infra output -raw cluster)
-export VPC_ID=$(terraform -chdir=infra output -raw vpc)
-export LOAD_BALANCER_CONTROLLER_ROLE_ARN=$(terraform -chdir=infra output -raw load_balancer_controller_role)
-kubectl --context "$CLUSTER_NAME" get nodes
-
+# Run from the repository root after Terraform and kubeconfig setup. A private
+# operator may receive saved outputs instead of a copy of sensitive TF state.
+umask 077
 work_dir=$(mktemp -d)
 trap 'rm -rf -- "$work_dir"' EXIT
+if [ -n "${FOUNDATION_OUTPUTS_FILE:-}" ]; then
+  cp -- "$FOUNDATION_OUTPUTS_FILE" "$work_dir/outputs.json"
+else
+  terraform -chdir=infra output -json > "$work_dir/outputs.json"
+fi
+output_value() {
+  python -c 'import json,sys; v=json.load(open(sys.argv[1], encoding="utf-8-sig"))[sys.argv[2]]["value"]; print(v if isinstance(v,str) else json.dumps(v))' "$work_dir/outputs.json" "$1"
+}
+export CLUSTER_NAME=$(output_value cluster)
+export VPC_ID=$(output_value vpc)
+export LOAD_BALANCER_CONTROLLER_ROLE_ARN=$(output_value load_balancer_controller_role)
+output_value domain_configuration > "$work_dir/domain-configuration.json"
+kubectl --context "$CLUSTER_NAME" get nodes
 
 download() {
   curl --fail --location --silent --show-error "$1" --output "$work_dir/$2"
@@ -39,4 +49,4 @@ helm upgrade --install argocd "$work_dir/argocd.tgz" --kube-context "$CLUSTER_NA
 
 kubectl --context "$CLUSTER_NAME" -n kube-system get certificates
 kubectl --context "$CLUSTER_NAME" -n external-secrets get deployments
-python configure_domains.py --services argocd --apply --context "$CLUSTER_NAME"
+python configure_domains.py --config "$work_dir/domain-configuration.json" --services argocd --apply --context "$CLUSTER_NAME"

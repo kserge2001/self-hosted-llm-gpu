@@ -32,7 +32,9 @@ class DeploymentTests(unittest.TestCase):
                        "assistant_image": "example/assistant@sha256:" + digest, "mlflow_arn": "arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-server/test",
                        "astra_host": "astra.example.com", "alb_arn": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test/abc",
                        "cognito_client_id": "test-client", "assistant_roles": {name: "arn:aws:iam::123456789012:role/" + name for name in ["k8s-assistant", "aws-assistant"]},
-                       "prompts": {kind: {"uri": "prompts:/astra-" + kind + "/1", "sha256": "e" * 64} for kind in ["kubernetes", "aws"]}}
+                       "prompts": {kind: {"uri": "prompts:/astra-" + kind + "/1", "template": "Reviewed\nprompt: sample",
+                                          "sha256": hashlib.sha256(b"Reviewed\nprompt: sample").hexdigest(), "experiment_id": "42"}
+                                   for kind in ["kubernetes", "aws"]}}
 
     def render(self, root):
         body = json.dumps(self.manifest).encode()
@@ -49,6 +51,18 @@ class DeploymentTests(unittest.TestCase):
                 self.assertEqual(service_account["metadata"]["annotations"]["eks.amazonaws.com/role-arn"], self.config["assistant_roles"][name])
                 deployment = next(doc for doc in docs if doc["kind"] == "Deployment")
                 self.assertEqual(deployment["spec"]["template"]["spec"]["serviceAccountName"], name)
+                config = next(doc for doc in docs if doc["kind"] == "ConfigMap")
+                self.assertTrue(config["immutable"])
+                self.assertEqual(config["data"]["prompt.txt"], "Reviewed\nprompt: sample")
+                pod = deployment["spec"]["template"]["spec"]
+                self.assertEqual(pod["volumes"][0]["configMap"]["name"], config["metadata"]["name"])
+
+    def test_modified_prompt_bundle_is_rejected_before_writing(self):
+        self.config["prompts"]["aws"]["template"] = "Unreviewed change"
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "Bundled prompt differs"):
+                self.render(directory)
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
     def test_runtime_substitution_is_rejected_before_writing(self):
         self.manifest["subject"]["runtime_digest"] = "sha256:" + "f" * 64

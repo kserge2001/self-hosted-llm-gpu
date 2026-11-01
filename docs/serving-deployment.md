@@ -6,7 +6,7 @@ This path has local implementation checks but still requires a live rehearsal. S
 
 Create one LiteLLM application key for each assistant, limited to the `astra` model with classroom request/token limits. Store each key as `{"OPENAI_API_KEY":"..."}` in that assistant's Terraform-created Secrets Manager secret. Do not use the gateway master key in an assistant. Synchronize the secrets with the existing External Secrets configuration before starting the pods.
 
-The Kubernetes assistant can list pods only in `synthetic`; the AWS assistant can describe EC2 instances in us-east-1 and filters its results to the Astra tag. Neither role grants infrastructure write permissions. They use separate IAM roles, service accounts and application keys.
+The Kubernetes assistant can list pods, describe deployments and read recent events only in `synthetic`; the AWS assistant can describe EC2 instances in us-east-1 and filters its results to the Astra tag. Neither role grants infrastructure write permissions. They use separate IAM roles, service accounts and application keys.
 
 Register each reviewed prompt against the active managed MLflow server:
 
@@ -16,7 +16,7 @@ python register_prompt.py --kind kubernetes > evidence/kubernetes-prompt.json
 python register_prompt.py --kind aws > evidence/aws-prompt.json
 ```
 
-Keep each numeric URI and content hash. The assistant refuses to start if the registered prompt differs from its pinned hash. Its trace records the application image, application commit, prompt URI/hash, model release, tool schema hash and evaluation dataset hash. Raw questions and tool responses are not recorded by this implementation; inspect the synthetic response in the application and use the trace for call order and identities.
+Keep each prompt record: numeric URI, exact text, content hash and experiment ID. Registration reads the exact version back from MLflow before producing the record. The deployment bundles that text in an immutable ConfigMap with a name derived from its hash. The assistant refuses to start if its bundled text differs from the pinned hash; starting an existing release does not fetch a prompt or look up an experiment in MLflow. Its trace records the application image, application commit, prompt URI/hash, model release, tool schema hash and evaluation dataset hash. Raw questions and tool responses are not recorded by this implementation; inspect the synthetic response in the application and use the trace for call order and identities. A returned trace ID alone does not prove successful export: verify the trace in MLflow, including the denied-export exercise.
 
 ## Render the deployment for review
 
@@ -33,7 +33,7 @@ Create `evidence/deployment-config.json` using actual values from Terraform and 
 | `astra_host` | Terraform `domain_configuration.hosts.inference` |
 | `alb_arn` | ARN of this stack's actual shared ALB |
 | `cognito_client_id` | This stack's assistant browser sign-in client |
-| `prompts` | Objects named `kubernetes` and `aws`, each with the registered `uri` and `sha256` |
+| `prompts` | Objects named `kubernetes` and `aws`, each with the registered `uri`, `sha256`, `template` and `experiment_id` |
 
 ```bash
 python prepare_deployment.py evidence/deployment-config.json --output deploy > evidence/rendered-release.json
@@ -51,6 +51,6 @@ An incomplete loader download requires a new Pod with an empty model volume afte
 
 ## Complete the classroom walkthrough
 
-Follow [Platform Verification](acceptance-checks.md) with synthetic requests: authenticated inference, separate application usage, both assistants' tool calls and trace IDs, prompt versions, evaluation evidence and live GPU monitoring. Confirm the forbidden Kubernetes namespace and AWS write actions are denied. Test the documented recovery exercise, restore the saved release, and run [Cleanup](cleanup.md).
+Follow [Platform Verification](acceptance-checks.md) with synthetic requests: authenticated inference, separate application usage, both assistants' tool calls and trace IDs, prompt versions, evaluation evidence and live GPU monitoring. Confirm the forbidden Kubernetes namespace and AWS write actions are denied. Use [Troubleshooting](troubleshooting-recovery.md) if a step fails, then run [Cleanup](cleanup.md) after the walkthrough.
 
 Keep all live results unchecked until observed. Neither container builds nor synthetic local trace tests certify this path as classroom ready.
