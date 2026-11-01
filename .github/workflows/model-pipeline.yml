@@ -72,10 +72,11 @@ jobs:
       - name: Start the pinned SageMaker pipeline
         env:
           RELEASE_ID: ${{ matrix.release_id }}
+          PIPELINE_NAME: ${{ vars.PIPELINE_NAME }}
         shell: bash
         run: |
           set -euo pipefail
           python -m venv .venv
           .venv/bin/python -m pip install --requirement requirements-ci.lock
-          arn=$(.venv/bin/python start_release.py "$RELEASE_ID")
+          arn=$(.venv/bin/python start_release.py "$RELEASE_ID" --pipeline-name "${PIPELINE_NAME:-astra-model-release}")
           printf '### SageMaker execution started\n\nRelease: %s\n\nExecution ARN: %s\n' "$RELEASE_ID" "$arn" >> "$GITHUB_STEP_SUMMARY"

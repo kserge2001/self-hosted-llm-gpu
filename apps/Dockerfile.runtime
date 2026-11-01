@@ -1,0 +1,23 @@
+FROM vllm/vllm-openai@sha256:befccf0e7e4089aa23926bb6f887a85c0d46c2a99e6de5c5ffdf5cb7957c5b34
+USER root
+# Keep the upstream CUDA/runtime stack. Apply available OS security fixes.
+RUN sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g; s|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources \
+    && apt-get update --error-on=any \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+COPY apps/runtime-security.lock /tmp/runtime-security.lock
+# These two unused 0.66b1 exporters require SDK 1.45.1, but this image uses
+# 1.40.0. No installed distribution requires them. Keep the matching 1.40.0
+# OTLP HTTP/gRPC exporters, SDK and LMCache constraints together.
+RUN python3 -m pip uninstall -y opentelemetry-exporter-otlp-common opentelemetry-exporter-http-transport
+# No dependency resolver changes to the tracing SDK, LMCache, PyTorch or CUDA.
+RUN python3 -m pip install --no-cache-dir --no-deps --require-hashes --upgrade -r /tmp/runtime-security.lock
+COPY checks/runtime_dependencies.py /tmp/runtime_dependencies.py
+RUN python3 /tmp/runtime_dependencies.py
+RUN python3 -c "from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter; from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter"
+# Installation tools are not used by offline model serving or Processing.
+# Remove their binaries, bundled Python libraries and build-time SBOMs together.
+RUN python3 -m pip uninstall -y uv && python3 /tmp/runtime_dependencies.py && python3 -m pip uninstall -y pip
+COPY pipeline_worker.py pipeline_artifacts.py evaluate_model.py managed_mlflow.py artifact_loader.py model_intake.py quarantine_intake.py scan_gate.py /opt/astra/
+COPY evaluation /opt/astra/evaluation
+# This is a candidate until the new image passes scanning and GPU evaluation.

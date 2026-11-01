@@ -2,9 +2,9 @@
 
 CareCart's AI Platform Engineering team is researching, designing and building an internal inference platform on AWS. Its internal model is Astra.
 
-This starter provides the AWS foundation, model intake checker and the PR-to-SageMaker trigger. Follow the [lab in Kodelumi](https://kodelumi.com/w/49_OMkQYNp9zuC57) for the full build.
+This starter provides the AWS foundation, versioned model intake, a SageMaker validation/evaluation pipeline, approval-gated publication, and model/assistant deployment code. Follow the [lab in Kodelumi](https://kodelumi.com/w/49_OMkQYNp9zuC57) for the full build.
 
-The e2e/astra branch contains the current code for independent testing. Import that branch's latest changes, not an older main snapshot. Live AWS validation is in progress. Read [what has been tested and what is still missing](docs/validation-status.md) before provisioning; this is not yet a complete, verified end-to-end release.
+Classroom-readiness changes are being prepared from the e2e/astra branch. Read [what has been tested and what is still missing](docs/validation-status.md) before provisioning; this is not yet a complete, verified end-to-end release. The new [model pipeline](docs/model-release-pipeline.md) and [serving deployment](docs/serving-deployment.md) guides describe implemented code that still requires a live rehearsal.
 
 Start by [importing the starter into your own GitHub account](docs/repository-setup.md). Your pull requests, GitHub Actions, AWS OIDC trust and Argo CD deployments must use your imported repository. After the import finishes, get a local working copy of your repository and create the Python environment using that guide.
 
@@ -65,10 +65,10 @@ Use your own AWS account, credentials and repository. Configure these before sub
 - Create the astra-deploy environment, allow main only, and configure the required deployment reviewers. Availability of these protections depends on your GitHub plan and repository visibility; do not assume they are active.
 - Configure Argo CD to pull the reviewed deployment configuration from your repository. Restrict its AppProject to the platform destinations.
 - Set the environment variable DEPLOY_ROLE_ARN to the role allowed to start and describe this pipeline. Restrict its OIDC trust to repo:OWNER/REPOSITORY:environment:astra-deploy and audience sts.amazonaws.com.
-- Create the astra-model-release SageMaker Pipeline and record its version. Its definition must accept ReleaseId, CandidateManifest, CandidateManifestVersion and CandidateManifestSha256.
+- Publish the SageMaker definition using [Model Release Pipeline](docs/model-release-pipeline.md) and record its version. Set the environment variable PIPELINE_NAME to the foundation's model_pipeline.pipeline_name. Its definition accepts ReleaseId, CandidateManifest, CandidateManifestVersion and CandidateManifestSha256.
 - Prepare the versioned S3 candidate manifest and record its SHA-256 fingerprint. It must identify the actual candidate objects and evidence.
 
-The starter does not create GitHub rules, reviewer assignments, OIDC trust, Argo CD applications or a SageMaker pipeline automatically. These require your account-specific configuration. The full scanning and evaluation job definitions must exist before the trigger can run; the trigger does not replace them.
+The starter does not create GitHub rules, reviewer assignments or OIDC trust automatically. These require your account-specific configuration. The supplied Argo CD manifests and SageMaker definition require rendering, review and deployment; the trigger does not replace those steps.
 
 ## E. Submit a model release through a PR
 

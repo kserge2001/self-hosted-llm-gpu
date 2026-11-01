@@ -36,7 +36,7 @@ Check the model name, token usage and the application or team that owns the requ
 
 Open the Kubernetes assistant and ask it to explain a synthetic Pending pod in its permitted namespace. In the AWS console, open SageMaker AI, enter Studio, choose Applications > MLflow, then choose Open MLflow for your tracking server. Find the new assistant trace.
 
-Open the model call, tool call, tool result and final answer. Confirm that the answer reflects the returned tool data. Open the prompt's numeric version and the evaluation run linked to the model release. Inspect the recorded scores, individual results and permitted artifacts. Add feedback to the trace using the configured reviewer access.
+Open the model and tool spans and inspect their order, timing, status and release identifiers. The application records trace metadata rather than raw questions, tool results or answers. Compare the answer in the assistant UI with the synthetic Kubernetes state. Open the prompt's numeric version and the evaluation run linked to the model release. Inspect the recorded scores, individual results and permitted artifacts. Add feedback using the configured reviewer access if the selected managed MLflow version supports that view; leave unsupported requirements explicitly open.
 
 Repeat with the AWS assistant using a read-only infrastructure question. Confirm that it has its own trace and application usage record.
 

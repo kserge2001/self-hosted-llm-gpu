@@ -46,14 +46,16 @@ def validate_request(release_id, request):
         raise ValueError("Pin an S3 object version")
 
 
-def request_arguments(release_id, request):
+def request_arguments(release_id, request, pipeline_name="astra-model-release"):
     """Build the SageMaker API arguments from a checked release request."""
     validate_request(release_id, request)
+    if not re.fullmatch(r"[A-Za-z0-9](?:-*[A-Za-z0-9]){0,255}", pipeline_name):
+        raise ValueError("Invalid pipeline name")
     # Repeating the same request uses the same token, avoiding duplicate runs.
     request_json = json.dumps(request, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(request_json.encode()).hexdigest()
     return {
-        "PipelineName": "astra-model-release",
+        "PipelineName": pipeline_name,
         "PipelineVersionId": request["pipeline_version"],
         "PipelineExecutionDisplayName": release_id,
         "ClientRequestToken": digest,
@@ -71,13 +73,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("release_id")
+    parser.add_argument("--pipeline-name", default="astra-model-release")
     args = parser.parse_args()
     if not re.fullmatch(RELEASE_ID_PATTERN, args.release_id):
         parser.error("Invalid release ID")
     from release_requests import load_request
 
     request = load_request(args.release_id)
-    arguments = request_arguments(args.release_id, request)
+    arguments = request_arguments(args.release_id, request, args.pipeline_name)
     sagemaker = boto3.client("sagemaker", region_name="us-east-1")
     # ** passes each dictionary entry as a named argument to the AWS SDK.
     response = sagemaker.start_pipeline_execution(**arguments)

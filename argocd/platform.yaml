@@ -11,6 +11,14 @@ spec:
     - https://nvidia.github.io/dcgm-exporter/helm-charts
   destinations:
     - server: https://kubernetes.default.svc
+      namespace: llm
+    - server: https://kubernetes.default.svc
+      namespace: k8s-assistant
+    - server: https://kubernetes.default.svc
+      namespace: aws-assistant
+    - server: https://kubernetes.default.svc
+      namespace: synthetic
+    - server: https://kubernetes.default.svc
       namespace: gpu-system
     - server: https://kubernetes.default.svc
       namespace: gateway

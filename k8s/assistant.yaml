@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${ASSISTANT_NAME}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${ASSISTANT_NAME}
+  namespace: ${ASSISTANT_NAME}
+  annotations:
+    eks.amazonaws.com/role-arn: ${ASSISTANT_ROLE_ARN}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${ASSISTANT_NAME}
+  namespace: ${ASSISTANT_NAME}
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate: {maxSurge: 0, maxUnavailable: 1}
+  selector:
+    matchLabels: {app: "${ASSISTANT_NAME}"}
+  template:
+    metadata:
+      labels: {app: "${ASSISTANT_NAME}"}
+    spec:
+      serviceAccountName: ${ASSISTANT_NAME}
+      enableServiceLinks: false
+      nodeSelector: {astra/tier: cpu}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: {app: "${ASSISTANT_NAME}"}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: assistant
+          image: ${ASSISTANT_IMAGE}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          ports:
+            - {name: http, containerPort: 8000}
+          envFrom:
+            - secretRef: {name: "${ASSISTANT_NAME}-env"}
+          env:
+            - {name: ASSISTANT_KIND, value: "${ASSISTANT_KIND}"}
+            - {name: APP_IMAGE, value: "${ASSISTANT_IMAGE}"}
+            - {name: APP_VERSION, value: "${APP_VERSION}"}
+            - {name: ASTRA_RELEASE_ID, value: "${RELEASE_ID}"}
+            - {name: PROMPT_URI, value: "${PROMPT_URI}"}
+            - {name: PROMPT_SHA256, value: "${PROMPT_SHA256}"}
+            - {name: EVALSET_SHA256, value: "${EVALSET_SHA256}"}
+            - {name: MLFLOW_TRACKING_ARN, value: "${MLFLOW_TRACKING_ARN}"}
+            - {name: OPENAI_BASE_URL, value: "https://${ASTRA_HOST}/v1"}
+            - {name: ASTRA_HOST, value: "${ASTRA_HOST}"}
+            - {name: EXPECTED_ALB_ARN, value: "${EXPECTED_ALB_ARN}"}
+            - {name: COGNITO_CLIENT_ID, value: "${COGNITO_CLIENT_ID}"}
+            - {name: AWS_DEFAULT_REGION, value: us-east-1}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${ASSISTANT_NAME}
+  namespace: ${ASSISTANT_NAME}
+spec:
+  selector: {app: "${ASSISTANT_NAME}"}
+  ports:
+    - {name: http, port: 8000, targetPort: http}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ${ASSISTANT_NAME}
+  namespace: ${ASSISTANT_NAME}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: "${ASSISTANT_NAME}"}

@@ -1,6 +1,19 @@
 # Validation status
 
-Updated October 29, 2026. Use the latest commit on e2e/astra for independent testing. The test account's credentials, Terraform state and private configuration are not included.
+Updated November 1, 2026. Classroom-readiness changes are prepared locally from e2e/astra commit 177b3f1. The test account's credentials, Terraform state and private configuration are not included. No new AWS compute was launched for this work.
+
+## Local readiness work since teardown
+
+- The current local suite has 105 passing tests. Terraform validation and its three mocked tests pass.
+- The runtime image builds with repaired OS/Python dependencies, compatible tracing packages and only the exact upstream NCCL dependency override. Unused installation tools and their bundled dependencies are removed together.
+- The October 30 repaired-image scan reports 386 HIGH/CRITICAL findings, all against linux-libc-dev 6.8.0-147.147. The fixable non-header findings are gone. Official Linux CVE records were retrieved for every remaining finding, and an inventory confirms the container contains no kernel binaries. One CVE also changes a UAPI header; its vulnerable conntrack implementation is kernel code, absent from the image. This assessment makes no claim about the host kernel.
+- A narrowly scoped exception was proposed to the owner. It has not been approved or implemented. The existing release gate still rejects all HIGH/CRITICAL findings. A fresh scan is required before the eventual rehearsal.
+- The November 1 refresh identified four newly reported pyasn1 findings, fixed by updating to 0.6.5. The final repaired-image scan has 385 findings (371 HIGH, 14 CRITICAL), all in the already reviewed kernel-header set. Its digest is `sha256:88305bdd47854ad08ae8800b6c8309d198d5b6c2ff78b16108353faafab5ec67`. The exception remains pending; no GPU evaluation was started.
+- The native SageMaker definition, separate processing roles, real-model evaluation worker, managed MLflow reporting and approval-gated publisher are implemented. Local SDK-shape checks pass; these new components have not been exercised together in AWS.
+- Both assistant services, their containers, read-only tool dispatch, IAM roles, Kubernetes manifests and Argo CD applications are implemented. A Linux-container check verified HTTP authentication, a synthetic response, an MLflow trace ID and release identifiers. It did not call a real model or SageMaker.
+- AWS read-only checks on November 1 found no EKS clusters, no active Astra-tagged instances and no in-progress SageMaker Processing jobs in us-east-1.
+
+The lab is **not yet classroom ready**. The runtime gate, live evaluation/promotion, two-zone serving, real assistant tool calls, student walkthrough, recovery and cleanup verification remain open. Use [Model Release Pipeline](model-release-pipeline.md) and [Serving Deployment](serving-deployment.md) for the new implementation. The sections below preserve the earlier live results.
 
 The live test was stopped at the owner's request. AWS verification confirmed that the temporary EKS cluster, instances, RDS, Redis, MLflow, load balancer, NAT gateways and VPC are gone. The final database snapshot, monitoring snapshots, evidence/model buckets, image repositories and storage encryption key were retained. Storage charges can continue. This is not an end-to-end verified lab. The results below describe observations before teardown; the temporary addresses are no longer available.
 
@@ -17,7 +30,7 @@ The live test was stopped at the owner's request. AWS verification confirmed tha
 - The managed MLflow server reached Created and Active. Its former launcher reached the managed UI after sign-in. A live API test created a run, metric and artifact and read the artifact back. Two prompt versions were visible in the browser. These were connectivity tests, not model evaluations.
 - The pinned Qwen candidate was downloaded and its publisher hashes verified. The intake Job completed and wrote a versioned quarantine manifest. The scan gate found clean GuardDuty events for all 76 exact artifact versions. The model is still unapproved and has not been served.
 
-## Current release blocker
+## October 29 release blocker
 
 Trivy 0.76.1 scanned the pinned vLLM 0.32.0 image and reported 392 HIGH and 17 CRITICAL findings, representing 397 distinct vulnerability IDs. The release check failed. Of the findings, 386 refer to the linux-libc-dev header package and need applicability review; they are not evidence that a kernel shipped inside the container is running. Other findings include Python and operating-system dependencies with available fixes. Do not treat the image as approved, hide the results or bypass the check. A repaired image needs a new digest, scan and compatibility test.
 
@@ -49,15 +62,15 @@ helm upgrade --install nvidia-device-plugin nvdp/nvidia-device-plugin \
   --values k8s/device-plugin-values.yaml --wait --timeout 10m
 ```
 
-## C. Not complete or not yet verified
+## C. Live checks still open after local implementation
 
 - Two-zone model inference and failover.
 - Argo CD administrator sign-in and completed access checks for the assistants.
 - The consolidated bootstrap script from a fresh student account. Its individual controller installation steps and the Argo CD storage/monitoring definitions were exercised live; the full student path still needs its own run.
 - All remaining application secret values and their synchronization.
-- A complete provisioned SageMaker scanning, evaluation and promotion pipeline. The repository currently includes the trigger and supporting scripts, not the complete pipeline definition.
+- Live provisioning and execution of the newly implemented SageMaker validation/evaluation pipeline and approval-gated publisher.
 - Full assistant traces, tool spans, feedback and release lineage in MLflow remain unverified. The selected browser access is now SageMaker Studio from the AWS console. Studio user access and that console walkthrough remain unverified.
-- The complete container build and Argo CD deployment configuration for the model and assistants.
+- Live deployment of the new model and assistant containers and Argo CD configuration.
 - Authenticated model responses, assistant tool calls, shared gateway limits, monitoring, alerts and recovery exercises.
 
 Start an independent review with the repository and Terraform foundation. Use your own operator role, private connectivity, domain, certificate and AWS credentials. Keep the local state for cleanup. Stop at any missing prerequisite and record the exact failing step; do not interpret a generated file or a passing unit test as evidence that a service was deployed.

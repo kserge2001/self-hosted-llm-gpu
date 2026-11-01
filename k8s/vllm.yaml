@@ -30,6 +30,9 @@ spec:
       labels: {app: vllm, release: "${RELEASE_ID}"}
     spec:
       serviceAccountName: vllm
+      securityContext:
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
       enableServiceLinks: false
       terminationGracePeriodSeconds: 120
       nodeSelector: {astra/tier: gpu}
