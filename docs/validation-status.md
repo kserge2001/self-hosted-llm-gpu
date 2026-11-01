@@ -14,6 +14,9 @@ Updated November 1, 2026. Classroom-readiness changes are prepared locally from 
 - The rebuilt CPU validator, model loader, gateway initializer and assistant each report zero HIGH/CRITICAL findings and zero secrets in their November 1 Trivy scans. The assistant now uses a separate hash-locked MLflow client dependency set (`mlflow-skinny` 3.0.0 and the SageMaker plugin), omitting the full MLflow distribution, Flask and PyArrow. This is a smaller client package compatible with the managed server, not a claim that upstream MLflow server vulnerabilities have been patched. No scanner exclusions were added.
 - Both assistant services, their containers, read-only tool dispatch, IAM roles, Kubernetes manifests and Argo CD applications are implemented. The rebuilt Linux container passes HTTP authentication, a synthetic response, MLflow trace identity, bundled-prompt startup without registry calls and altered-prompt rejection. It did not call a real model or SageMaker.
 - AWS read-only checks on November 1 found no EKS clusters, no active Astra-tagged instances and no in-progress SageMaker Processing jobs in us-east-1.
+- The revised eleven lessons are published with a continuous build sequence, an overview diagram and readable outcomes and checkpoints. The course site's unsupported Markdown tables were replaced with formatted lists and callouts, then checked in the student view. The documented cleanup commands now use the same Terraform directory as setup.
+- Hosted Linux CI passed on both the classroom branch and main for commit c9ac0e6. The four scanned CPU images were pushed to the existing private ECR repositories and their digests read back. Syntax checks passed for 29 Bash blocks plus the Python/JSON examples across the lessons and their directly linked guides. These checks do not execute the live deployment commands.
+- Main now requires a pull request, one code-owner approval and the checks status. The astra-deploy environment requires approval and allows main only. Its AWS role is restricted to this repository/environment and the named Astra pipeline. Only the owner is currently a repository collaborator, so a second authorized reviewer must be arranged before the release PR can satisfy the configured gate. OIDC execution remains to be tested live.
 
 The lab is **not yet classroom ready**. Live evaluation/promotion, two-zone serving, real assistant tool calls, the student walkthrough and cleanup verification remain open. The owner narrowed the required walkthrough to a working first iteration: advanced tuning, repeated rebuilds and fault-injection drills are outside that scope. The foundation plan has 141 creations, no deletions and no GPU resources. Only the private operator IAM resources have been applied. The owner explicitly approved up to $20 additional rehearsal charges on November 1. Preflight must finish before launching compute; the rehearsal must cover the full student path in one planned deployment window. Use [Model Release Pipeline](model-release-pipeline.md) and [Serving Deployment](serving-deployment.md) for the new implementation. The sections below preserve the earlier live results.
 
@@ -66,14 +69,14 @@ helm upgrade --install nvidia-device-plugin nvdp/nvidia-device-plugin \
 
 ## C. Live checks still open after local implementation
 
-- Two-zone model inference and failover.
+- Two-zone model inference.
 - Argo CD administrator sign-in and completed access checks for the assistants.
 - The consolidated bootstrap script from a fresh student account. Its individual controller installation steps and the Argo CD storage/monitoring definitions were exercised live; the full student path still needs its own run.
 - All remaining application secret values and their synchronization.
 - Live provisioning and execution of the newly implemented SageMaker validation/evaluation pipeline and approval-gated publisher.
 - Full assistant traces, tool spans, feedback and release lineage in MLflow remain unverified. The selected browser access is now SageMaker Studio from the AWS console. Studio user access and that console walkthrough remain unverified.
 - Live deployment of the new model and assistant containers and Argo CD configuration.
-- Authenticated model responses, assistant tool calls, shared gateway limits, monitoring, alerts and recovery exercises.
+- Authenticated model responses, assistant tool calls, essential access controls and current monitoring data. Advanced tuning, fault injection and recovery drills are outside the first classroom walkthrough.
 
 Start an independent review with the repository and Terraform foundation. Use your own operator role, private connectivity, domain, certificate and AWS credentials. Keep the local state for cleanup. Stop at any missing prerequisite and record the exact failing step; do not interpret a generated file or a passing unit test as evidence that a service was deployed.
 

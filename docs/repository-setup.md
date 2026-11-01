@@ -10,7 +10,7 @@ Create your own GitHub repository before the first exercise. Your pull requests,
 4. Select Begin import and wait until GitHub reports that the import has completed.
 5. Open the new repository under your account. Check that infra, k8s, tests and .github/workflows are present.
 
-The current classroom build uses the codex/astra-classroom-readiness branch. In your imported repository, create main from that branch and make main the default branch. The lab's pull requests and release workflow use main.
+Open main in your imported repository and make it the default branch if necessary. The starter now includes main. If your import contains only the classroom branch, create main from codex/astra-classroom-readiness first. The lab's pull requests and release workflow use main.
 
 **Step 2: Open your imported repository locally**
 
