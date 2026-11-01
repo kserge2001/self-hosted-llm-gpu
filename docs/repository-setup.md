@@ -10,16 +10,17 @@ Create your own GitHub repository before the first exercise. Your pull requests,
 4. Select Begin import and wait until GitHub reports that the import has completed.
 5. Open the new repository under your account. Check that infra, k8s, tests and .github/workflows are present.
 
-Open main in your imported repository and make it the default branch if necessary. The starter now includes main. If your import contains only the classroom branch, create main from codex/astra-classroom-readiness first. The lab's pull requests and release workflow use main.
+Start this fresh import from codex/astra-classroom-readiness, the branch linked throughout the published course. The commands below create your local main from that classroom build and fast-forward the imported main. Do this initial setup before configuring branch protection. The lab's later pull requests and release workflow use main. Do not force-push over an existing team's changes.
 
 **Step 2: Open your imported repository locally**
 
 The import creates the repository in your GitHub account. Now get a local working copy of that repository. Replace YOUR_GITHUB_NAME with its owner; if you chose a different repository name, change it below as well.
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_NAME/self-hosted-llm-gpu.git
+git clone --branch codex/astra-classroom-readiness https://github.com/YOUR_GITHUB_NAME/self-hosted-llm-gpu.git
 cd self-hosted-llm-gpu
-git switch main
+git switch -c main
+git push --set-upstream origin main
 git remote -v
 python -m venv .venv
 source .venv/bin/activate
