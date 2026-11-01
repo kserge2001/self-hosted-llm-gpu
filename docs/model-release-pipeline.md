@@ -16,7 +16,7 @@ python checks/client_compatibility.py
 python checks/assistant_compatibility.py
 ```
 
-Push the reviewed images to your own ECR repositories and record their complete digest URIs. Scan the runtime by its ECR digest using the pinned Trivy scanner. Save the unmodified JSON report under the evidence bucket's `runtime/` prefix, recording its object version and SHA-256. A HIGH/CRITICAL finding blocks validation. The November 1 repaired image still has 385 kernel-header findings awaiting the [scoped exception decision](runtime-review.md); no exception is enabled in the release code.
+Push the reviewed images to your own ECR repositories and record their complete digest URIs. Scan the runtime by its ECR digest using the pinned Trivy scanner. Save the unmodified JSON report under the evidence bucket's `runtime/` prefix, recording its object version and SHA-256. A HIGH/CRITICAL finding blocks validation unless covered by an explicit, pinned and unexpired owner-approved exception. The November 1 repaired image has a [bounded exception for 385 kernel-header findings](runtime-review.md). It is specific to that image and test period, not a reusable blanket exclusion for student builds.
 
 Keep `gpu_enabled=false` in private foundation inputs until the runtime and release prerequisites are resolved. The foundation provisions separate validation, evaluation, pipeline and promotion roles. Processing uses private subnets; validation cannot approve a package, and promotion cannot change its approval status.
 
@@ -37,6 +37,8 @@ Export the `model_pipeline` Terraform output to `evidence/pipeline-config.json`.
 ```
 
 Merge these fields into the exported object; do not replace its IAM, network and bucket settings. Example strings intentionally fail validation.
+
+When a separately approved exception is required, also include `runtime_exception` with its evidence-bucket URI, exact object version and SHA-256. Validation records how many enumerated findings it accepted and shortens the release evidence expiry to the exception's expiry. Omit this field for the default zero-findings policy.
 
 ```bash
 python build_pipeline.py evidence/pipeline-config.json --output evidence/pipeline-definition.json

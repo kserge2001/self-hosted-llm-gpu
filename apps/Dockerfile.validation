@@ -2,6 +2,6 @@ FROM python:3.13-slim-bookworm@sha256:281d39ff02e3b389401586134ff9e6572954687822
 RUN apt-get update --error-on=any && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 COPY apps/validation-requirements.lock /tmp/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock && pip check
-COPY pipeline_worker.py pipeline_artifacts.py evaluate_model.py managed_mlflow.py artifact_loader.py model_intake.py quarantine_intake.py scan_gate.py /opt/astra/
+COPY pipeline_worker.py pipeline_artifacts.py runtime_exception.py evaluate_model.py managed_mlflow.py artifact_loader.py model_intake.py quarantine_intake.py scan_gate.py /opt/astra/
 COPY evaluation /opt/astra/evaluation
 ENTRYPOINT ["python3", "/opt/astra/pipeline_worker.py"]

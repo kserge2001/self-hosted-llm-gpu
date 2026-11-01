@@ -62,7 +62,7 @@ def health():
 @app.get("/", response_class=HTMLResponse)
 def index(x_amzn_oidc_data: str = Header(default="")):
     authenticated_user(x_amzn_oidc_data)
-    return Path(__file__).with_name("assistant.html").read_text(encoding="utf-8")
+    return Path(__file__).with_name("assistant.html").read_text(encoding="utf-8").replace('data-preview="true"', 'data-preview="false"', 1)
 
 
 @app.post("/ask")

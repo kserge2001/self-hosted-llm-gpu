@@ -122,6 +122,18 @@ def validate(args, session):
         scan = read_pinned_json(s3, args.runtime_scan_uri, args.runtime_scan_version,
                                 args.runtime_scan_sha256, limit=32 * 1024 * 1024)
         findings = runtime_findings(scan, args.runtime_image)
+        if args.runtime_exception_uri:
+            from runtime_exception import apply_exception
+            if s3_location(args.runtime_exception_uri)[0] != args.evidence_bucket:
+                raise ValueError("Runtime exception is outside the trusted evidence bucket")
+            exception = read_pinned_json(s3, args.runtime_exception_uri, args.runtime_exception_version,
+                                         args.runtime_exception_sha256)
+            findings, accepted = apply_exception(findings, exception, args.runtime_image)
+            report["runtime_exception"] = {"uri": args.runtime_exception_uri,
+                "version": args.runtime_exception_version, "sha256": args.runtime_exception_sha256,
+                "accepted_findings": len(accepted), "valid_until": exception["valid_until"]}
+            if datetime.fromisoformat(exception["valid_until"].replace("Z", "+00:00")) < datetime.fromisoformat(report["valid_until"]):
+                report["valid_until"] = exception["valid_until"]
         if findings:
             raise ValueError(f"Runtime scan has {len(findings)} HIGH/CRITICAL findings")
         report["runtime_scan"] = {"uri": args.runtime_scan_uri, "version": args.runtime_scan_version,
@@ -217,7 +229,8 @@ def main():
                  "evidence-bucket", "execution-id", "runtime-image", "policy-sha256", "evalset-sha256"):
         parser.add_argument("--" + name, required=True)
     for name in ("runtime-scan-uri", "runtime-scan-version", "runtime-scan-sha256", "scan-log-group",
-                 "malware-plan-arn", "validation-uri", "mlflow-arn", "mlflow-bucket"):
+                 "malware-plan-arn", "validation-uri", "mlflow-arn", "mlflow-bucket",
+                 "runtime-exception-uri", "runtime-exception-version", "runtime-exception-sha256"):
         parser.add_argument("--" + name)
     parser.add_argument("--policy", default="/opt/astra/evaluation/policy.json")
     parser.add_argument("--dataset", default="/opt/astra/evaluation/cases.json")

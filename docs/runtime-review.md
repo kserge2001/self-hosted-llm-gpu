@@ -1,8 +1,8 @@
-# Runtime review awaiting a decision
+# Approved, bounded runtime exception
 
 The current repaired local image is `astra-runtime@sha256:88305bdd47854ad08ae8800b6c8309d198d5b6c2ff78b16108353faafab5ec67`. It is a candidate, not an approved release.
 
-The November 1 scan refresh found four newly reported pyasn1 issues. Updating pyasn1 to 0.6.5 fixed them. The final report, `evidence/runtime-scan-repaired-2026-11-01.json`, has **385 remaining findings: 371 HIGH and 14 CRITICAL**, all against linux-libc-dev and all included in the official-record review below. No other HIGH/CRITICAL findings remain in that report. The proposed exception applies only to this final digest and its enumerated header findings; it remains unapproved.
+The November 1 scan refresh found four newly reported pyasn1 issues. Updating pyasn1 to 0.6.5 fixed them. The final report, `evidence/runtime-scan-repaired-2026-11-01.json`, has **385 remaining findings: 371 HIGH and 14 CRITICAL**, all against linux-libc-dev and all included in the official-record review below. No other HIGH/CRITICAL findings remain in that report. The owner explicitly approved the documented exception during the November 1 voice conversation.
 
 The preceding October 30 image's Trivy 0.76.1 report had 386 HIGH/CRITICAL findings, all against the installed `linux-libc-dev` 6.8.0-147.147 package. Its unmodified report is retained at `evidence/runtime-scan-repaired-v2.json`. The November 1 header set is a subset of that reviewed set.
 
@@ -12,6 +12,8 @@ The applicability review retrieved all 386 official CVE records from the CVE Pro
 
 This is a container applicability assessment. It does not assess the kernel of an EKS worker, SageMaker host or Docker host. The headers remain installed because the runtime may need them for compilation; their package records and scan findings have not been removed or hidden.
 
-The proposed exception would bind to this exact image digest, package version and enumerated CVE list; preserve the raw scan and review evidence; expire after the rehearsal; and reject every other HIGH/CRITICAL finding. No exception is currently enabled. The owner was asked to approve this change to the existing zero-findings rule before a GPU rehearsal. An answer is still pending. New findings or a different image require a new review.
+The recorded exception binds to this exact image digest, package version and enumerated CVE list. It preserves the raw scan and review evidence and rejects every other HIGH/CRITICAL finding. The approved record is retained in `evidence/runtime-exception-approved.json` and expires November 1 at 22:45 UTC. The validator accepts exceptions only from a pinned version/hash in the trusted evidence bucket. Tests reject absent approval, another image, changed package versions, wildcard entries, unreviewed CVEs and expiry. New findings or a different image require a new review; expiry is enforced rather than silently extended.
+
+Approval of this exception is not model-release approval or proof of working inference. The existing model evaluation and separate registry approval are still required.
 
 The local runtime also still needs GPU compatibility evaluation. A completed build, dependency check or applicability review cannot establish successful inference.

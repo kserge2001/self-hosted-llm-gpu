@@ -69,6 +69,14 @@ def build(config, policy_sha256, evalset_sha256):
                                 "--scan-log-group", config["scan_log_group"],
                                 "--malware-plan-arn", config["malware_plan_arn"],
                             ], 1800)
+    if config.get("runtime_exception"):
+        exception = config["runtime_exception"]
+        if not re.fullmatch(r"[a-f0-9]{64}", exception["sha256"]):
+            raise ValueError("Pin the approved runtime exception")
+        validation["Arguments"]["AppSpecification"]["ContainerArguments"].extend([
+            "--runtime-exception-uri", exception["uri"], "--runtime-exception-version", exception["version"],
+            "--runtime-exception-sha256", exception["sha256"],
+        ])
     evaluation = processing("Evaluate", "evaluate", config["runtime_image"], "ml.g6e.2xlarge",
                             config["evaluation_role_arn"], [
                                 "--validation-uri", join(root, "validation.json"),
