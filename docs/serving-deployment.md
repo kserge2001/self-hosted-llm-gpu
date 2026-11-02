@@ -43,7 +43,9 @@ This reads and verifies the exact promoted manifest, then renders `deploy/model`
 
 ## Start only when the release is ready
 
-Enable the reviewed GPU capacity through Terraform only after the model release, images, secrets, prompts and deployment manifests are ready. Render and apply `argocd/serving.yaml` with the repository URL and reviewed Git commit. The updated Astra AppProject permits the model and assistant namespaces.
+Prepare the first model deployment with `python prepare_deployment.py --component model --release evidence/promoted-release.json`. This reads the saved foundation outputs and `evidence/images.json`; assistant prompts are not required for the first model response. Commit the rendered model files, then enable the reviewed GPU capacity through Terraform. Render and apply `argocd/model.yaml` with the repository URL and reviewed Git revision.
+
+After the first response, prepare the complete assistant settings and use `python prepare_deployment.py evidence/deployment-config.json --component assistants`. Commit those generated files, then render and apply `argocd/assistants.yaml`. This keeps the working model deployment intact while adding the applications. The Astra AppProject permits both sets of namespaces.
 
 Sync `astra-model` and watch its loader logs. Each loader reads exact S3 versions and verifies hashes before writing the release identity. Both vLLM replicas must become Ready in separate zones. Then sync `astra-assistants` and confirm both replicas of each assistant are Ready. Publish the assistant routes using the existing domain configuration workflow.
 
