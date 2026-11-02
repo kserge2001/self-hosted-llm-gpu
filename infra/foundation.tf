@@ -116,8 +116,11 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = module.vpc.private_route_table_ids
 }
 module "eks" {
-  source                                   = "terraform-aws-modules/eks/aws"
-  version                                  = "21.29.0"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.29.0"
+  # Module tags also populate worker launch-template tag specifications.
+  # Provider default tags alone do not tag EC2 instances launched by EKS.
+  tags                                     = { Project = "astra", ManagedBy = "Terraform", Environment = "development" }
   name                                     = var.name
   kubernetes_version                       = "1.35"
   endpoint_private_access                  = true
