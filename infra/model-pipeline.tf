@@ -107,7 +107,7 @@ resource "aws_iam_role_policy" "model_promotion" {
     { Effect = "Allow", Action = ["s3:GetObject", "s3:GetObjectVersion"], Resource = [
       "${aws_s3_bucket.data["quarantine"].arn}/candidates/*", "${aws_s3_bucket.data["evidence"].arn}/pipeline/*",
     "${aws_s3_bucket.data["release"].arn}/releases/*"] },
-    { Effect = "Allow", Action = "s3:PutObject", Resource = "${aws_s3_bucket.data["release"].arn}/releases/*" },
+    { Effect = "Allow", Action = ["s3:PutObject", "s3:AbortMultipartUpload"], Resource = "${aws_s3_bucket.data["release"].arn}/releases/*" },
     { Effect = "Allow", Action = ["kms:Decrypt", "kms:GenerateDataKey"], Resource = aws_kms_key.platform.arn },
     { Effect = "Deny", Action = "sagemaker:UpdateModelPackage", Resource = "*" }
   ] })

@@ -22,6 +22,31 @@ def verify_copy(s3, bucket, item):
         raise ValueError("Promoted object failed its integrity check")
 
 
+def copy_version(s3, source_bucket, destination_bucket, item, key):
+    """Copy the pinned source version, including model shards above 5 GiB."""
+    source = {"Bucket": source_bucket, "Key": item["key"], "VersionId": item["version_id"]}
+    if item["bytes"] <= 5 * 1024 ** 3:
+        return s3.copy_object(Bucket=destination_bucket, Key=key, CopySource=source,
+                              MetadataDirective="REPLACE", Metadata={"sha256": item["sha256"]})
+    upload = s3.create_multipart_upload(Bucket=destination_bucket, Key=key,
+                                        Metadata={"sha256": item["sha256"]})
+    upload_id = upload["UploadId"]
+    try:
+        parts = []
+        part_size = 1024 ** 3
+        for number, start in enumerate(range(0, item["bytes"], part_size), 1):
+            end = min(start + part_size, item["bytes"]) - 1
+            part = s3.upload_part_copy(Bucket=destination_bucket, Key=key,
+                UploadId=upload_id, PartNumber=number, CopySource=source,
+                CopySourceRange=f"bytes={start}-{end}")
+            parts.append({"PartNumber": number, "ETag": part["CopyPartResult"]["ETag"]})
+        return s3.complete_multipart_upload(Bucket=destination_bucket, Key=key,
+            UploadId=upload_id, MultipartUpload={"Parts": parts})
+    except Exception:
+        s3.abort_multipart_upload(Bucket=destination_bucket, Key=key, UploadId=upload_id)
+        raise
+
+
 def promote(s3, sagemaker, package_arn, evidence_bucket, quarantine_bucket,
             release_bucket, package_group, now=None):
     package = sagemaker.describe_model_package(ModelPackageName=package_arn)
@@ -52,8 +77,6 @@ def promote(s3, sagemaker, package_arn, evidence_bucket, quarantine_bucket,
         "sha256": manifest_ref["sha256"],
     })
     files = validate_candidate(candidate, expected["release_id"], quarantine_bucket)
-    if any(item["bytes"] > 5 * 1024 ** 3 for item in files):
-        raise ValueError("This publisher supports shards up to 5 GiB; multipart promotion is required for larger files")
     runtime_image = evidence["runtime_image"]
     if runtime_image.rsplit("@", 1)[-1] != expected["runtime_digest"]:
         raise ValueError("Runtime differs from approved evaluation")
@@ -61,12 +84,7 @@ def promote(s3, sagemaker, package_arn, evidence_bucket, quarantine_bucket,
     promoted = []
     for item in files:
         key = f"{prefix}/files/{item['path']}"
-        result = s3.copy_object(
-            Bucket=release_bucket, Key=key,
-            CopySource={"Bucket": quarantine_bucket, "Key": item["key"],
-                        "VersionId": item["version_id"]},
-            MetadataDirective="REPLACE", Metadata={"sha256": item["sha256"]},
-        )
+        result = copy_version(s3, quarantine_bucket, release_bucket, item, key)
         version = result.get("VersionId")
         if not version or version == "null":
             raise ValueError("Release bucket versioning is required")
