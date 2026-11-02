@@ -14,6 +14,6 @@ This is a container applicability assessment. It does not assess the kernel of a
 
 The recorded exception binds to this exact image digest, package version and enumerated CVE list. It preserves the raw scan and review evidence and rejects every other HIGH/CRITICAL finding. The approved record is retained in `evidence/runtime-exception-approved.json` and expires November 1 at 22:45 UTC. The validator accepts exceptions only from a pinned version/hash in the trusted evidence bucket. Tests reject absent approval, another image, changed package versions, wildcard entries, unreviewed CVEs and expiry. New findings or a different image require a new review; expiry is enforced rather than silently extended.
 
-Approval of this exception is not model-release approval or proof of working inference. The existing model evaluation and separate registry approval are still required.
+Approval of this exception is not model-release approval or proof of working inference. The file checks and a real serving request are still required for the classroom path.
 
-The local runtime also still needs GPU compatibility evaluation. A completed build, dependency check or applicability review cannot establish successful inference.
+The local runtime also still needs a real GPU serving check. A completed build, dependency check or applicability review cannot establish successful inference.

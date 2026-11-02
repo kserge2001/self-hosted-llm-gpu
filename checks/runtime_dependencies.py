@@ -21,7 +21,7 @@ def check():
     if result.returncode and result.stdout.strip().splitlines() != [UPSTREAM_OVERRIDE]:
         raise SystemExit("Unexpected runtime dependency conflict")
     if result.returncode:
-        print("Exact upstream NCCL override recorded; GPU evaluation is still required.")
+        print("Exact upstream NCCL override recorded; a real GPU serving check is still required.")
 
 
 if __name__ == "__main__":

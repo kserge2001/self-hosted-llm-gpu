@@ -16,7 +16,7 @@ python register_prompt.py --kind kubernetes > evidence/kubernetes-prompt.json
 python register_prompt.py --kind aws > evidence/aws-prompt.json
 ```
 
-Keep each prompt record: numeric URI, exact text, content hash and experiment ID. Registration reads the exact version back from MLflow before producing the record. The deployment bundles that text in an immutable ConfigMap with a name derived from its hash. The assistant refuses to start if its bundled text differs from the pinned hash; starting an existing release does not fetch a prompt or look up an experiment in MLflow. Its trace records the application image, application commit, prompt URI/hash, model release, tool schema hash and evaluation dataset hash. Raw questions and tool responses are not recorded by this implementation; inspect the synthetic response in the application and use the trace for call order and identities. A returned trace ID alone does not prove successful export: open the real request's trace in MLflow.
+Keep each prompt record: numeric URI, exact text, content hash and experiment ID. Registration reads the exact version back from MLflow before producing the record. The deployment bundles that text in an immutable ConfigMap with a name derived from its hash. The assistant refuses to start if its bundled text differs from the pinned hash; starting an existing release does not fetch a prompt or look up an experiment in MLflow. Its trace records the application image, application commit, prompt URI/hash, model release, tool schema hash. Raw questions and tool responses are not recorded by this implementation; inspect the synthetic response in the application and use the trace for call order and identities. A returned trace ID alone does not prove successful export: open the real request's trace in MLflow.
 
 ## Render the deployment for review
 
@@ -53,6 +53,6 @@ An incomplete loader download requires a new Pod with an empty model volume afte
 
 ## Complete the classroom walkthrough
 
-Follow [Platform Verification](acceptance-checks.md) with synthetic requests: authenticated inference, separate application usage, both assistants' tool calls and trace IDs, prompt versions, evaluation evidence and live GPU monitoring. Confirm the forbidden Kubernetes namespace and AWS write actions are denied. Use [Troubleshooting](troubleshooting-recovery.md) if a step fails, then run [Cleanup](cleanup.md) after the walkthrough.
+Follow [Platform Verification](acceptance-checks.md) with synthetic requests: authenticated inference, separate application usage, both assistants' tool calls and trace IDs, prompt versions and live GPU monitoring. Confirm the forbidden Kubernetes namespace and AWS write actions are denied. Use [Troubleshooting](troubleshooting-recovery.md) if a step fails, then run [Cleanup](cleanup.md) after the walkthrough.
 
 Keep all live results unchecked until observed. Neither container builds nor synthetic local trace tests certify this path as classroom ready.

@@ -36,7 +36,7 @@ def main():
                     "APP_VERSION": "local-test", "ASTRA_RELEASE_ID": "synthetic-release",
                     "PROMPT_URI": f"prompts:/{prompt.name}/{prompt.version}",
                     "PROMPT_SHA256": hashlib.sha256(AWS_TEMPLATE.encode()).hexdigest(),
-                    "EVALSET_SHA256": "b" * 64, "MLFLOW_TRACKING_ARN": uri,
+                    "MLFLOW_TRACKING_ARN": uri,
                     "MLFLOW_EXPERIMENT_ID": experiment.experiment_id, "PROMPT_FILE": str(prompt_file)}
         with (patch.dict(os.environ, settings), patch("apps.assistant_server.make_client", return_value=client),
               patch("mlflow.load_prompt", side_effect=ConnectionError("Registry unavailable")) as registry,
@@ -56,8 +56,9 @@ def main():
         traces = mlflow.search_traces(experiment_ids=[experiment.experiment_id], return_type="list")
         assert len(traces) == 1
         root = next(span for span in traces[0].data.spans if span.parent_id is None)
-        for key in ("application_image", "prompt_uri", "prompt_sha256", "astra_release", "tool_schema_sha256", "evalset_sha256"):
+        for key in ("application_image", "prompt_uri", "prompt_sha256", "astra_release", "tool_schema_sha256"):
             assert root.inputs[key], (key, root.inputs)
+        assert "evalset_sha256" not in root.inputs
         assert "Check the lab" not in str(root.inputs)
         # Corruption must fail closed even when the registry is unavailable.
         prompt_file.write_text("Unreviewed prompt", encoding="utf-8")

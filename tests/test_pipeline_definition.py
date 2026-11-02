@@ -27,7 +27,7 @@ class PipelineTests(unittest.TestCase):
             "mlflow_arn": "arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-server/test",
             "mlflow_bucket": "astra-test-mlflow", "model_package_group": "astra-test",
         }
-        self.definition = build(self.config, "d" * 64, "e" * 64)
+        self.definition = build(self.config, "d" * 64)
         self.client = boto3.client("sagemaker", region_name="us-east-1", aws_access_key_id="testing", aws_secret_access_key="testing")
 
     def test_processing_arguments_match_aws_sdk_schema(self):
@@ -45,25 +45,24 @@ class PipelineTests(unittest.TestCase):
             arguments["ProcessingJobName"] = "astra-test-job"
             validate_parameters(arguments, model.input_shape)
 
-    def test_unpinned_image_and_shared_role_fail(self):
+    def test_unpinned_image_and_missing_role_fail(self):
         bad = copy.deepcopy(self.config)
         bad["runtime_image"] = bad["runtime_image"].split("@")[0] + ":latest"
         with self.assertRaises(ValueError):
-            build(bad, "d" * 64, "e" * 64)
+            build(bad, "d" * 64)
         bad = copy.deepcopy(self.config)
-        bad["evaluation_role_arn"] = bad["validation_role_arn"]
+        bad["validation_role_arn"] = ""
         with self.assertRaises(ValueError):
-            build(bad, "d" * 64, "e" * 64)
+            build(bad, "d" * 64)
 
-    def test_nvme_gpu_omits_unsupported_volume_key_but_keeps_output_encryption(self):
-        validation, evaluation = self.definition["Steps"][:2]
+    def test_file_checks_use_only_encrypted_cpu_processing(self):
+        self.assertEqual([step['Name'] for step in self.definition['Steps']], ['Validate'])
+        validation = self.definition['Steps'][0]
         cpu = validation["Arguments"]["ProcessingResources"]["ClusterConfig"]
-        gpu = evaluation["Arguments"]["ProcessingResources"]["ClusterConfig"]
         self.assertEqual(cpu["VolumeKmsKeyId"], self.config["kms_key_arn"])
-        self.assertEqual(gpu["InstanceType"], "ml.g6e.2xlarge")
-        self.assertNotIn("VolumeKmsKeyId", gpu)
-        for step in (validation, evaluation):
-            self.assertEqual(step["Arguments"]["ProcessingOutputConfig"]["KmsKeyId"], self.config["kms_key_arn"])
+        self.assertEqual(cpu["InstanceType"], "ml.m5.xlarge")
+        self.assertEqual(validation["Arguments"]["ProcessingOutputConfig"]["KmsKeyId"], self.config["kms_key_arn"])
+        self.assertNotIn('--evalset-sha256', validation['Arguments']['AppSpecification']['ContainerArguments'])
 
     def test_creation_finds_matching_version_without_starting_job(self):
         arn = "arn:aws:sagemaker:us-east-1:123456789012:pipeline/astra-test-model-release"
@@ -81,20 +80,9 @@ class PipelineTests(unittest.TestCase):
             self.assertFalse(result["execution_started"])
             stub.assert_no_pending_responses()
 
-    def test_capacity_fallback_preserves_gpu_encryption_and_release_gate(self):
-        config = dict(self.config, evaluation_instance_type="ml.g6e.4xlarge")
-        definition = build(config, "d" * 64, "e" * 64)
-        cluster = definition["Steps"][1]["Arguments"]["ProcessingResources"]["ClusterConfig"]
-        self.assertEqual(cluster["InstanceType"], "ml.g6e.4xlarge")
-        self.assertNotIn("VolumeKmsKeyId", cluster)
-        self.assertEqual(definition["Steps"][2], self.definition["Steps"][2])
-        with self.assertRaises(ValueError):
-            build(dict(config, evaluation_instance_type="ml.g6e.48xlarge"), "d" * 64, "e" * 64)
-
-    def test_infrastructure_lab_runs_validation_without_a_separate_gpu(self):
-        definition = build(dict(self.config, workflow_scope="infrastructure_lab"), "d" * 64, "e" * 64)
-        self.assertEqual([step['Name'] for step in definition['Steps']], ['Validate'])
-        self.assertEqual(definition['Steps'][0], self.definition['Steps'][0])
+    def test_legacy_evaluation_settings_do_not_add_a_gpu_job(self):
+        definition = build(dict(self.config, evaluation_instance_type="ml.g6e.4xlarge"), "d" * 64)
+        self.assertEqual(definition, self.definition)
 
 
 if __name__ == "__main__":

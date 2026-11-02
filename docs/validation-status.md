@@ -37,3 +37,9 @@ The runtime ran under the exact-image exception approved for this rehearsal. Tha
 Detailed account-specific evidence stays outside Git under `evidence`: `astra-first-response-20261102.txt`, `grafana-gpu-live-20261102.json`, `mlflow-export-final-20261102.json`, screenshots, validation records and cleanup inventories. Model files and a copy of the live results are retained in the private S3 evidence/release buckets.
 
 The last conservative planning estimate was $18 against the approved additional $20 ceiling. This is an estimate using AWS us-east-1 pricing and planned operating hours, not measured billing. Rehearsal-attributable billed cost is still unknown. Retained storage, snapshots, images, logs and keys can continue to incur charges.
+
+## Cleanup after the live rehearsal
+
+The model-evaluation question suite and separate GPU evaluation implementation were removed from the starter. Assistant deployment and trace startup no longer require an evaluation dataset. The supplied file-check helper replaces manual pipeline-operation steps in the lesson; the short reference note explains the checks. Infrastructure definitions are unchanged.
+
+These revisions pass 125 local unit tests, the assistant HTTP/MLflow compatibility check and syntax checks for the current 32 Bash blocks across eleven lessons. The new helper, changed container definitions and final student sequence have not been deployed again. The earlier live evidence applies to the recorded rehearsal versions.

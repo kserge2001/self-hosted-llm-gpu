@@ -23,7 +23,7 @@ async def lifespan(app):
     kind = os.environ["ASSISTANT_KIND"]
     app.state.tools = tool_schema(kind)
     os.environ["TOOL_SCHEMA_SHA256"] = hashlib.sha256(schema_json(kind).encode()).hexdigest()
-    for name in ("PROMPT_SHA256", "EVALSET_SHA256"):
+    for name in ("PROMPT_SHA256",):
         if not re.fullmatch(r"[a-f0-9]{64}", os.environ[name]):
             raise ValueError("Missing pinned identity: " + name)
     if not re.fullmatch(r"prompts:/[A-Za-z0-9_.-]+/[1-9][0-9]*", os.environ["PROMPT_URI"]):

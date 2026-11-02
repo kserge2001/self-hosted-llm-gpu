@@ -57,4 +57,4 @@ python scan_gate.py --manifest-uri "$CANDIDATE_MANIFEST_URI" \
 
 Expected result: malware is PASS and every file has a matching event ID. Scans can finish after the upload. If a result is missing, check GuardDuty and the event delivery before rerunning the check. Never change a missing result to PASS.
 
-The candidate must still pass runtime vulnerability scanning, format and compatibility checks, evaluation and release approval. Continue with [Model Release Pipeline](model-release-pipeline.md). Its implementation still needs live validation; completing intake does not mean Astra can answer requests.
+The supplied preparation helper checks the files and runtime before publication. See [Supplied model preparation](model-release-pipeline.md). The model is then loaded on the EKS GPUs and tested with one real request. Completing intake alone does not prove that Astra can answer.

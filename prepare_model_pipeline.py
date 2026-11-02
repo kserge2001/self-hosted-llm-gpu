@@ -56,8 +56,6 @@ def main():
     pipeline = sub.add_parser('pipeline')
     pipeline.add_argument('--scan', required=True)
     pipeline.add_argument('--exception', help='An already approved, exact-image exception, if required')
-    pipeline.add_argument('--evaluation-instance', choices=['ml.g6e.2xlarge', 'ml.g6e.4xlarge'], default='ml.g6e.2xlarge')
-    pipeline.add_argument('--include-evaluation', action='store_true', help='Optional separate evaluation outside the infrastructure lab')
     pipeline.add_argument('--output', default='evidence/pipeline-config.json')
     request = sub.add_parser('request')
     request.add_argument('release_id')
@@ -114,16 +112,14 @@ def main():
             import boto3
             s3 = boto3.client('s3', region_name='us-east-1')
             config = dict(outputs['model_pipeline'], validation_image=images['validation']['image'],
-                          runtime_image=images['runtime']['image'], evaluation_instance_type=args.evaluation_instance)
-            if not args.include_evaluation:
-                config['workflow_scope'] = 'infrastructure_lab'
+                          runtime_image=images['runtime']['image'], workflow_scope='infrastructure_lab')
             for field, file in [('runtime_scan', args.scan), ('runtime_exception', args.exception)]:
                 if file:
                     raw = read(file)
                     identity = hashlib.sha256(Path(file).read_bytes()).hexdigest()
                     config[field] = put_json(s3, config['evidence_bucket'], f'runtime/{identity}/{field}.json', raw)
-            hashes = [hashlib.sha256((ROOT / 'evaluation' / name).read_bytes()).hexdigest() for name in ('policy.json', 'cases.json')]
-            build(config, *hashes)
+            policy_hash = hashlib.sha256((ROOT / 'model-policy.json').read_bytes()).hexdigest()
+            build(config, policy_hash)
             body = json.dumps(config, indent=2)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open('x', encoding='utf-8') as output:

@@ -16,7 +16,7 @@ Follow the [Astra capstone in Kodelumi](https://kodelumi.com/w/49_OMkQYNp9zuC57)
 
 The design uses two complete model replicas and two gateways across two Availability Zones. Each model replica loads the full model on its own GPU. Keep this design while using observed requests and GPU measurements to guide later improvements.
 
-This is an infrastructure capstone. Students do not build PR approval systems or repeat model-quality, PII or OWASP evaluation exercises. The supplied repository retains broader evaluation code for separate use; it is not the required classroom path. MCP routing and guardrails are explained as LiteLLM capabilities, not configured features of this deployment.
+This is an infrastructure capstone. Students do not build PR approval systems or repeat model-quality, PII or OWASP evaluation exercises. Model-quality question sets are not part of this starter. The supplied model-preparation code checks files; the live serving test is a real Astra request. MCP routing and guardrails are explained as LiteLLM capabilities, not configured features of this deployment.
 
 ## Verified rehearsal, November 2, 2026
 

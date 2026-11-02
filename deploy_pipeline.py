@@ -41,9 +41,8 @@ def main():
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())
     root = Path(__file__).resolve().parent
-    hashes = [hashlib.sha256((root / "evaluation" / name).read_bytes()).hexdigest()
-              for name in ("policy.json", "cases.json")]
-    definition = build(config, *hashes)
+    policy_hash = hashlib.sha256((root / "model-policy.json").read_bytes()).hexdigest()
+    definition = build(config, policy_hash)
     client = boto3.client("sagemaker", region_name="us-east-1")
     result = deploy(client, config, definition)
     Path(args.output).write_text(json.dumps(result, indent=2), encoding="utf-8")

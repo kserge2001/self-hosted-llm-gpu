@@ -22,7 +22,7 @@ class DeploymentTests(unittest.TestCase):
     def setUp(self):
         digest = "a" * 64
         self.manifest = {"schema": 1, "release_id": "astra-test", "runtime_image": "example/runtime@sha256:" + digest,
-                         "subject": {"runtime_digest": "sha256:" + digest, "evalset_sha256": "b" * 64},
+                         "subject": {"runtime_digest": "sha256:" + digest},
                          "files": [{"path": name, "key": "releases/astra-test/files/" + name,
                                     "version_id": "version", "sha256": "c" * 64, "bytes": 5}
                                    for name in ["config.json", "model.safetensors"]]}

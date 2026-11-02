@@ -26,7 +26,7 @@ def prepare(s3, settings, output, component="all"):
     if bucket != settings["release_bucket"] or key != f"releases/{manifest['release_id']}/release-manifest.json":
         raise ValueError("Use the expected promoted release bucket and manifest path")
     if manifest["runtime_image"].rsplit("@", 1)[-1] != manifest["subject"]["runtime_digest"]:
-        raise ValueError("Runtime differs from the evaluated release")
+        raise ValueError("Runtime differs from the prepared release")
     common = {
         "RELEASE_ID": manifest["release_id"], "RUNTIME_IMAGE": manifest["runtime_image"],
         "RELEASE_BUCKET": bucket, "MANIFEST_KEY": key, "MANIFEST_VERSION": reference["version"],
@@ -38,13 +38,11 @@ def prepare(s3, settings, output, component="all"):
         documents["model/model.yaml"] = render((ROOT / "k8s/vllm.yaml").read_text(), common)
     if component in {"all", "assistants"}:
         common.update(APP_VERSION=settings["git_revision"], ASSISTANT_IMAGE=settings["assistant_image"],
-            EVALSET_SHA256=manifest["subject"]["evalset_sha256"], MLFLOW_TRACKING_ARN=settings["mlflow_arn"],
+            MLFLOW_TRACKING_ARN=settings["mlflow_arn"],
             ASTRA_HOST=settings["astra_host"], EXPECTED_ALB_ARN=settings["alb_arn"],
             COGNITO_CLIENT_ID=settings["cognito_client_id"])
     if component != "model" and not re.fullmatch(r"[a-f0-9]{40}", common["APP_VERSION"]):
         raise ValueError("Pin the application source commit")
-    if component != "model" and not re.fullmatch(r"[a-f0-9]{64}", common["EVALSET_SHA256"]):
-        raise ValueError("Missing evaluation dataset identity")
     assistants = (("kubernetes", "k8s-assistant"), ("aws", "aws-assistant")) if component != "model" else ()
     for kind, name in assistants:
         prompt = settings["prompts"][kind]

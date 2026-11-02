@@ -123,7 +123,7 @@ def make_manifest(repo, revision, info, config, tokenizer, metadata_hashes):
             "runtime compatibility",
             "GPU sizing",
             "artifact scans",
-            "assistant evaluation",
+            "live serving response",
             "release approval",
         ],
     }
