@@ -13,10 +13,11 @@ class CleanupPlanTests(unittest.TestCase):
             resource("aws_s3_bucket.evidence", "aws_s3_bucket"),
             resource("aws_db_instance.gateway", "aws_db_instance"),
             resource("data.aws_route53_zone.existing", "aws_route53_zone", "data")],
-            "child_modules": [{"resources": [resource("module.eks.aws_kms_key.secret", "aws_kms_key")]}]}}}
+            "child_modules": [{"resources": [resource("module.eks.aws_kms_key.secret", "aws_kms_key"),
+                resource("module.eks.aws_iam_role.this[0]", "aws_iam_role")]}]}}}
         retained, disposable = selection(state)
         self.assertEqual(disposable, ["aws_db_instance.gateway"])
-        self.assertEqual(len(retained), 2)
+        self.assertEqual(len(retained), 3)
 
     def test_rejects_retained_resource_added_by_dependency_graph(self):
         change = resource("aws_kms_key.storage", "aws_kms_key")

@@ -9,7 +9,10 @@ from pathlib import Path
 def keep(resource):
     kind = resource["type"]
     return (kind.startswith(("aws_s3_", "aws_ecr_", "aws_kms_"))
-            or kind in {"aws_cloudwatch_log_group", "aws_sagemaker_model_package_group"})
+            or kind in {"aws_cloudwatch_log_group", "aws_sagemaker_model_package_group"}
+            # The retained cluster KMS key's policy references this role. A
+            # targeted destroy of the role also selects the key and its alias.
+            or resource.get("address") == "module.eks.aws_iam_role.this[0]")
 
 
 def resources(module):
