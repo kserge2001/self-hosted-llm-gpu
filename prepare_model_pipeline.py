@@ -9,6 +9,7 @@ import yaml
 
 from build_pipeline import build
 from pipeline_artifacts import put_json
+from pipeline_artifacts import read_pinned_json, s3_location
 from render_manifest import render
 from start_release import validate_request
 
@@ -56,11 +57,15 @@ def main():
     pipeline.add_argument('--scan', required=True)
     pipeline.add_argument('--exception', help='An already approved, exact-image exception, if required')
     pipeline.add_argument('--evaluation-instance', choices=['ml.g6e.2xlarge', 'ml.g6e.4xlarge'], default='ml.g6e.2xlarge')
+    pipeline.add_argument('--include-evaluation', action='store_true', help='Optional separate evaluation outside the infrastructure lab')
     pipeline.add_argument('--output', default='evidence/pipeline-config.json')
     request = sub.add_parser('request')
     request.add_argument('release_id')
     request.add_argument('--intake-log', default='evidence/intake.log')
     request.add_argument('--version', default='evidence/pipeline-version.json')
+    collect = sub.add_parser('collect-validation')
+    collect.add_argument('--execution-arn', required=True)
+    collect.add_argument('--output', default='evidence/validation-reference.json')
     args = parser.parse_args()
     if args.stage == 'request':
         value = request_from_log(args.release_id, Path(args.intake_log).read_text(), read(args.version))
@@ -74,11 +79,44 @@ def main():
         images = read(args.images)
         if args.stage == 'intake':
             body = intake_yaml(outputs, images, read(args.candidate), args.release_id)
+        elif args.stage == 'collect-validation':
+            import boto3
+            from publish_lab_model import check_validation
+            client = boto3.client('sagemaker', region_name='us-east-1')
+            steps = client.list_pipeline_execution_steps(PipelineExecutionArn=args.execution_arn)['PipelineExecutionSteps']
+            matches = [step for step in steps if step['StepName'] == 'Validate' and step['StepStatus'] == 'Succeeded']
+            if len(matches) != 1:
+                raise ValueError('The validation step has not succeeded')
+            job_arn = matches[0]['Metadata']['ProcessingJob']['Arn']
+            job = client.describe_processing_job(ProcessingJobName=job_arn.rsplit('/', 1)[-1])
+            if (job['ProcessingJobStatus'] != 'Completed'
+                    or job['RoleArn'] != outputs['model_pipeline']['validation_role_arn']
+                    or job['AppSpecification']['ImageUri'] != images['validation']['image']):
+                raise ValueError('Validation job does not match this foundation and image record')
+            execution_id = args.execution_arn.rsplit('/', 1)[-1]
+            bucket = outputs['model_pipeline']['evidence_bucket']
+            output_uri = f's3://{bucket}/pipeline/{execution_id}/validate-output/'
+            reports = [output for output in job['ProcessingOutputConfig']['Outputs'] if output['OutputName'] == 'report']
+            if len(reports) != 1 or reports[0]['S3Output']['S3Uri'] != output_uri:
+                raise ValueError('Validation output is outside this execution')
+            s3 = boto3.client('s3', region_name='us-east-1')
+            response = s3.get_object(Bucket=bucket, Key=f'pipeline/{execution_id}/validate-output/validation.json')
+            with response['Body'] as source:
+                raw = source.read(4 * 1024 * 1024 + 1)
+            if len(raw) > 4 * 1024 * 1024:
+                raise ValueError('Validation output is too large')
+            reference = json.loads(raw)['evidence']
+            if s3_location(reference['uri']) != (bucket, f'pipeline/{execution_id}/validation.json'):
+                raise ValueError('Validation reference is outside this execution')
+            check_validation(read_pinned_json(s3, **reference), images['runtime']['image'])
+            body = json.dumps(reference, indent=2)
         else:
             import boto3
             s3 = boto3.client('s3', region_name='us-east-1')
             config = dict(outputs['model_pipeline'], validation_image=images['validation']['image'],
                           runtime_image=images['runtime']['image'], evaluation_instance_type=args.evaluation_instance)
+            if not args.include_evaluation:
+                config['workflow_scope'] = 'infrastructure_lab'
             for field, file in [('runtime_scan', args.scan), ('runtime_exception', args.exception)]:
                 if file:
                     raw = read(file)

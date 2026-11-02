@@ -80,6 +80,9 @@ def build(config, policy_sha256, evalset_sha256):
             "--runtime-exception-uri", exception["uri"], "--runtime-exception-version", exception["version"],
             "--runtime-exception-sha256", exception["sha256"],
         ])
+    if config.get("workflow_scope") == "infrastructure_lab":
+        return {"Version": "2020-12-01", "Parameters": [{"Name": p, "Type": "String"} for p in parameters],
+                "Steps": [validation]}
     evaluation_instance = config.get("evaluation_instance_type", "ml.g6e.2xlarge")
     if evaluation_instance not in {"ml.g6e.2xlarge", "ml.g6e.4xlarge"}:
         raise ValueError("Use a supported single-GPU G6e evaluation instance")

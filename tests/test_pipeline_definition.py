@@ -91,6 +91,11 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build(dict(config, evaluation_instance_type="ml.g6e.48xlarge"), "d" * 64, "e" * 64)
 
+    def test_infrastructure_lab_runs_validation_without_a_separate_gpu(self):
+        definition = build(dict(self.config, workflow_scope="infrastructure_lab"), "d" * 64, "e" * 64)
+        self.assertEqual([step['Name'] for step in definition['Steps']], ['Validate'])
+        self.assertEqual(definition['Steps'][0], self.definition['Steps'][0])
+
 
 if __name__ == "__main__":
     unittest.main()
