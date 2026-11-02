@@ -27,7 +27,8 @@ def copy_version(s3, source_bucket, destination_bucket, item, key):
     source = {"Bucket": source_bucket, "Key": item["key"], "VersionId": item["version_id"]}
     if item["bytes"] <= 5 * 1024 ** 3:
         return s3.copy_object(Bucket=destination_bucket, Key=key, CopySource=source,
-                              MetadataDirective="REPLACE", Metadata={"sha256": item["sha256"]})
+                              MetadataDirective="REPLACE", Metadata={"sha256": item["sha256"]},
+                              TaggingDirective="REPLACE")
     upload = s3.create_multipart_upload(Bucket=destination_bucket, Key=key,
                                         Metadata={"sha256": item["sha256"]})
     upload_id = upload["UploadId"]

@@ -46,9 +46,10 @@ resource "aws_iam_role_policy" "processing" {
     { Effect = "Allow", Action = ["s3:ListBucket", "s3:GetBucketLocation"], Resource = [
     aws_s3_bucket.data["quarantine"].arn, aws_s3_bucket.data["evidence"].arn] },
     { Effect = "Allow", Action = ["s3:PutObject", "s3:AbortMultipartUpload"], Resource = "${aws_s3_bucket.data["evidence"].arn}/pipeline/*" },
-    { Effect = "Allow", Action = ["kms:Decrypt", "kms:GenerateDataKey", "kms:DescribeKey"], Resource = aws_kms_key.platform.arn },
-    { Effect = "Allow", Action = "kms:CreateGrant", Resource = aws_kms_key.platform.arn,
-    Condition = { Bool = { "kms:GrantIsForAWSResource" = "true" } } },
+    { Effect = "Allow", Action = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"], Resource = aws_kms_key.platform.arn },
+    # SageMaker's Processing grant request does not supply GrantIsForAWSResource.
+    # Scope the permission to this stack's key and isolated Processing roles.
+    { Effect = "Allow", Action = "kms:CreateGrant", Resource = aws_kms_key.platform.arn },
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"],
     Resource = [for repo in aws_ecr_repository.images : repo.arn] },
