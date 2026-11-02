@@ -1,4 +1,4 @@
-"""Send one real request through the deployed Astra gateway."""
+"""Send one request through the deployed Astra gateway."""
 import argparse
 import json
 from pathlib import Path

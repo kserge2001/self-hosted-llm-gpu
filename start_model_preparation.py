@@ -1,4 +1,4 @@
-"""Start a pinned SageMaker workflow from a reviewed release request."""
+"""Start the supplied CPU model-preparation workflow from exact input versions."""
 
 import argparse
 import hashlib
@@ -68,20 +68,20 @@ def request_arguments(release_id, request, pipeline_name="astra-model-release"):
     }
 
 
-if __name__ == "__main__":
+
+def main():
     import boto3
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("release_id")
-    parser.add_argument("--pipeline-name", default="astra-model-release")
+    import os
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--request-env', default='ASTRA_MODEL_REQUEST',
+                        help='Environment variable containing the preparation input JSON')
+    parser.add_argument('--pipeline-name', default='astra-model-release')
     args = parser.parse_args()
-    if not re.fullmatch(RELEASE_ID_PATTERN, args.release_id):
-        parser.error("Invalid release ID")
-    from release_requests import load_request
+    request = json.loads(os.environ[args.request_env])
+    arguments = request_arguments(request.get('release_id'), request, args.pipeline_name)
+    client = boto3.client('sagemaker', region_name='us-east-1')
+    print(client.start_pipeline_execution(**arguments)['PipelineExecutionArn'])
 
-    request = load_request(args.release_id)
-    arguments = request_arguments(args.release_id, request, args.pipeline_name)
-    sagemaker = boto3.client("sagemaker", region_name="us-east-1")
-    # ** passes each dictionary entry as a named argument to the AWS SDK.
-    response = sagemaker.start_pipeline_execution(**arguments)
-    print(response["PipelineExecutionArn"])
+
+if __name__ == '__main__':
+    main()

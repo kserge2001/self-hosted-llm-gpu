@@ -15,10 +15,6 @@ def join(*parts):
     return {"Std:Join": {"On": "", "Values": list(parts)}}
 
 
-def result(path):
-    return {"Std:JsonGet": {"PropertyFile": get("Steps.Evaluate.PropertyFiles.Evaluation"), "Path": path}}
-
-
 def build(config, policy_sha256):
     for field in ("validation_image", "runtime_image"):
         if not re.fullmatch(r"\d{12}\.dkr\.ecr\.us-east-1\.amazonaws\.com/[^@]+@sha256:[a-f0-9]{64}", config[field]):

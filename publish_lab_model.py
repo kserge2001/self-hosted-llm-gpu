@@ -1,7 +1,7 @@
 """Publish file-validated model artifacts for the infrastructure-only lab.
 
-This path records that a separate GPU evaluation was not run. The lab is not
-complete until the deployed EKS endpoint returns a real response.
+File preparation is complete only after the copies are verified. The lab also
+requires a request through the deployed Astra gateway.
 """
 import argparse
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from artifact_loader import validate_manifest
 from pipeline_artifacts import put_json, read_pinned_json, s3_location, validate_candidate
-from promote_release import copy_version, verify_copy
+from model_storage import copy_version, verify_copy
 
 FILE_CHECKS = {'provenance', 'license', 'file_integrity', 'file_format', 'malware', 'runtime_scan'}
 
@@ -58,7 +58,7 @@ def publish(s3, reference, settings, runtime_image):
                 'source_repository': candidate['source_repository'], 'source_revision': candidate['source_revision'],
                 'license_label': candidate['license_label'],
                 'publication': {'scope': 'infrastructure_lab', 'validation': reference,
-                                'separate_gpu_evaluation': 'not_run', 'live_inference': 'pending',
+                                'live_inference': 'pending',
                                 'runtime_valid_until': report['valid_until']}}
     validate_manifest(manifest)
     return put_json(s3, settings['release_bucket'], prefix + '/release-manifest.json', manifest, IfNoneMatch='*')

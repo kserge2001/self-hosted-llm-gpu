@@ -1,57 +1,21 @@
-name: Astra model pipeline
+name: Model file preparation
 on:
-  push:
-    branches: [main]
-    paths: ['releases/*.json']
   workflow_dispatch:
     inputs:
-      release_id:
-        description: Existing reviewed release ID for recovery or retry
+      request_json:
+        description: Exact preparation inputs (release_id, pipeline_version, manifest_uri, manifest_version, manifest_sha256)
         required: true
         type: string
 permissions:
   contents: read
 jobs:
-  select:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      release_ids: ${{ steps.requests.outputs.release_ids }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: '3.13'
-      - name: Select reviewed release requests
-        id: requests
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-          RELEASE_ID: ${{ inputs.release_id }}
-        run: |
-          if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            ids=$(python release_requests.py one "$RELEASE_ID")
-          else
-            ids=$(python release_requests.py changed "$BASE_SHA" "$HEAD_SHA")
-          fi
-          echo "release_ids=$ids" >> "$GITHUB_OUTPUT"
   start:
-    needs: select
-    if: needs.select.outputs.release_ids != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        release_id: ${{ fromJSON(needs.select.outputs.release_ids) }}
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: astra-deploy
     timeout-minutes: 10
     concurrency:
-      group: astra-release-${{ matrix.release_id }}
+      group: astra-model-preparation
       cancel-in-progress: false
     permissions:
       contents: read
@@ -59,24 +23,34 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: ${{ github.sha }}
           persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Check preparation inputs
+        env:
+          ASTRA_MODEL_REQUEST: ${{ inputs.request_json }}
+          PIPELINE_NAME: ${{ vars.PIPELINE_NAME }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from start_model_preparation import request_arguments
+          request = json.loads(os.environ['ASTRA_MODEL_REQUEST'])
+          request_arguments(request.get('release_id'), request, os.environ['PIPELINE_NAME'] or 'astra-model-release')
+          PY
       - uses: aws-actions/configure-aws-credentials@5579c002bb4778aa43395ef1df492868a9a1c83f
         with:
           role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
           role-session-name: astra-${{ github.run_id }}
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: '3.13'
-      - name: Start the pinned SageMaker pipeline
+      - name: Start the supplied CPU file checks
         env:
-          RELEASE_ID: ${{ matrix.release_id }}
+          ASTRA_MODEL_REQUEST: ${{ inputs.request_json }}
           PIPELINE_NAME: ${{ vars.PIPELINE_NAME }}
         shell: bash
         run: |
           set -euo pipefail
           python -m venv .venv
           .venv/bin/python -m pip install --requirement requirements-ci.lock
-          arn=$(.venv/bin/python start_release.py "$RELEASE_ID" --pipeline-name "${PIPELINE_NAME:-astra-model-release}")
-          printf '### SageMaker execution started\n\nRelease: %s\n\nExecution ARN: %s\n' "$RELEASE_ID" "$arn" >> "$GITHUB_STEP_SUMMARY"
+          arn=$(.venv/bin/python start_model_preparation.py --pipeline-name "${PIPELINE_NAME:-astra-model-release}")
+          printf '### Model file checks started\n\nExecution ARN: %s\n' "$arn" >> "$GITHUB_STEP_SUMMARY"

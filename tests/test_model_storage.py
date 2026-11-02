@@ -1,10 +1,10 @@
 import unittest
 from unittest.mock import Mock
 
-from promote_release import copy_version
+from model_storage import copy_version
 
 
-class PromotionCopyTests(unittest.TestCase):
+class ModelStorageTests(unittest.TestCase):
     def test_large_model_shard_preserves_source_version_and_covers_every_byte(self):
         s3 = Mock()
         s3.create_multipart_upload.return_value = {"UploadId": "this-copy"}

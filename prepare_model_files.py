@@ -14,7 +14,7 @@ from pathlib import Path
 
 from pipeline_artifacts import runtime_findings
 from prepare_model_pipeline import request_from_log
-from start_release import request_arguments
+from start_model_preparation import request_arguments
 
 ROOT = Path(__file__).resolve().parent
 

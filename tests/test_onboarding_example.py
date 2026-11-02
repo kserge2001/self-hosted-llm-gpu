@@ -1,9 +1,8 @@
-"""Run the lesson's actual SDK snippet against a simulated HTTP endpoint."""
+"""Verify the supplied application example using a local HTTP fixture."""
 
 import contextlib
 import io
 import json
-import re
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -14,8 +13,7 @@ from openai import AuthenticationError, OpenAI
 
 class OnboardingExampleTests(unittest.TestCase):
     def run_example(self, handler):
-        lesson = Path("docs/application-onboarding.md").read_text(encoding="utf-8")
-        code = re.search(r"```python\n(.*?)\n```", lesson, re.S)[1]
+        code = Path("examples/astra_request.py").read_text(encoding="utf-8")
         code = code.replace("YOUR_ASTRA_HOST", "astra.example.com")
 
         def make_client(**settings):

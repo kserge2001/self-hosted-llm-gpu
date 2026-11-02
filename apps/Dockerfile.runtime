@@ -18,4 +18,4 @@ RUN python3 -c "from opentelemetry.exporter.otlp.proto.http.trace_exporter impor
 # Installation tools are not used by offline model serving.
 # Remove their binaries, bundled Python libraries and build-time SBOMs together.
 RUN python3 -m pip uninstall -y uv && python3 /tmp/runtime_dependencies.py && python3 -m pip uninstall -y pip
-# Verify the image scan and a real serving request before classroom use.
+# Verify the image scan and a serving request before classroom use.

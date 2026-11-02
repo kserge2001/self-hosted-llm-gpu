@@ -6,6 +6,7 @@ __pycache__/
 *.tfstate.*
 *.plan
 terraform.tfvars
+infra/*.auto.tfvars.json
 foundation-outputs.json
 astra-candidate.json
 .env
