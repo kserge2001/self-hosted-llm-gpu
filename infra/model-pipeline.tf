@@ -80,7 +80,7 @@ resource "aws_iam_role_policy" "model_pipeline" {
   name = "validate-evaluate-register-only"
   role = aws_iam_role.model_pipeline.id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = ["sagemaker:CreateProcessingJob", "sagemaker:DescribeProcessingJob", "sagemaker:StopProcessingJob"],
+    { Effect = "Allow", Action = ["sagemaker:CreateProcessingJob", "sagemaker:DescribeProcessingJob", "sagemaker:StopProcessingJob", "sagemaker:AddTags"],
     Resource = "arn:aws:sagemaker:us-east-1:${data.aws_caller_identity.platform.account_id}:processing-job/*" },
     { Effect = "Allow", Action = ["sagemaker:CreateModelPackage", "sagemaker:DescribeModelPackage", "sagemaker:DescribeModelPackageGroup", "sagemaker:AddTags"],
     Resource = local.package_arns },

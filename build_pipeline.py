@@ -51,6 +51,8 @@ def build(config, policy_sha256, evalset_sha256):
             "AppSpecification": {"ImageUri": image, "ContainerEntrypoint": ["python3", "/opt/astra/pipeline_worker.py"],
                                  "ContainerArguments": [stage, *common_args, *extra]},
             "RoleArn": role,
+            "Tags": [{"Key": "Project", "Value": "astra"},
+                     {"Key": "AstraPipeline", "Value": config["pipeline_name"]}],
             "ProcessingResources": {"ClusterConfig": {"InstanceCount": 1, "InstanceType": instance,
                                      "VolumeSizeInGB": 150, "VolumeKmsKeyId": config["kms_key_arn"]}},
             "StoppingCondition": {"MaxRuntimeInSeconds": max_seconds},
