@@ -6,6 +6,7 @@ complete until the deployed EKS endpoint returns a real response.
 import argparse
 import json
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from artifact_loader import validate_manifest
@@ -39,15 +40,18 @@ def publish(s3, reference, settings, runtime_image):
     candidate = read_pinned_json(s3, **report['candidate'])
     files = validate_candidate(candidate, report['release_id'], settings['quarantine_bucket'])
     prefix = 'releases/' + report['release_id']
-    promoted = []
-    for item in files:
+    def copy_file(item):
         key = prefix + '/files/' + item['path']
         copied = copy_version(s3, settings['quarantine_bucket'], settings['release_bucket'], item, key)
         if not copied.get('VersionId') or copied['VersionId'] == 'null':
             raise ValueError('Release objects must be versioned')
         entry = dict(item, key=key, version_id=copied['VersionId'])
         verify_copy(s3, settings['release_bucket'], entry)
-        promoted.append(entry)
+        return entry
+    # Copy independent shards concurrently. Every future must succeed before
+    # the manifest can be published, and each destination version is hashed.
+    with ThreadPoolExecutor(max_workers=4) as workers:
+        promoted = list(workers.map(copy_file, files))
     check_validation(report, runtime_image)
     manifest = {'schema': 1, 'release_id': report['release_id'], 'runtime_image': runtime_image,
                 'files': promoted, 'subject': report['subject'], 'candidate': report['candidate'],
