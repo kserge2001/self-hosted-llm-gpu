@@ -55,6 +55,16 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build(bad, "d" * 64, "e" * 64)
 
+    def test_nvme_gpu_omits_unsupported_volume_key_but_keeps_output_encryption(self):
+        validation, evaluation = self.definition["Steps"][:2]
+        cpu = validation["Arguments"]["ProcessingResources"]["ClusterConfig"]
+        gpu = evaluation["Arguments"]["ProcessingResources"]["ClusterConfig"]
+        self.assertEqual(cpu["VolumeKmsKeyId"], self.config["kms_key_arn"])
+        self.assertEqual(gpu["InstanceType"], "ml.g6e.2xlarge")
+        self.assertNotIn("VolumeKmsKeyId", gpu)
+        for step in (validation, evaluation):
+            self.assertEqual(step["Arguments"]["ProcessingOutputConfig"]["KmsKeyId"], self.config["kms_key_arn"])
+
     def test_creation_finds_matching_version_without_starting_job(self):
         arn = "arn:aws:sagemaker:us-east-1:123456789012:pipeline/astra-test-model-release"
         from datetime import datetime, timezone

@@ -46,7 +46,7 @@ def build(config, policy_sha256, evalset_sha256):
         "--evalset-sha256", evalset_sha256,
     ]
 
-    def processing(name, stage, image, instance, role, extra, max_seconds):
+    def processing(name, stage, image, instance, role, extra, max_seconds, volume_kms=True):
         return {"Name": name, "Type": "Processing", "Arguments": {
             "AppSpecification": {"ImageUri": image, "ContainerEntrypoint": ["python3", "/opt/astra/pipeline_worker.py"],
                                  "ContainerArguments": [stage, *common_args, *extra]},
@@ -54,7 +54,8 @@ def build(config, policy_sha256, evalset_sha256):
             "Tags": [{"Key": "Project", "Value": "astra"},
                      {"Key": "AstraPipeline", "Value": config["pipeline_name"]}],
             "ProcessingResources": {"ClusterConfig": {"InstanceCount": 1, "InstanceType": instance,
-                                     "VolumeSizeInGB": 150, "VolumeKmsKeyId": config["kms_key_arn"]}},
+                                     "VolumeSizeInGB": 150,
+                                     **({"VolumeKmsKeyId": config["kms_key_arn"]} if volume_kms else {})}},
             "StoppingCondition": {"MaxRuntimeInSeconds": max_seconds},
             "NetworkConfig": {"EnableNetworkIsolation": False, "EnableInterContainerTrafficEncryption": True,
                               "VpcConfig": {"Subnets": config["private_subnets"], "SecurityGroupIds": config["security_groups"]}},
@@ -83,7 +84,9 @@ def build(config, policy_sha256, evalset_sha256):
                             config["evaluation_role_arn"], [
                                 "--validation-uri", join(root, "validation.json"),
                                 "--mlflow-arn", config["mlflow_arn"], "--mlflow-bucket", config["mlflow_bucket"],
-                            ], 3600)
+                            ], 3600, volume_kms=False)
+    # g6e Processing uses hardware-encrypted local NVMe. SageMaker rejects a
+    # customer KMS volume key for that storage; output encryption still uses KMS.
     evaluation["DependsOn"] = ["Validate"]
     evaluation["PropertyFiles"] = [{"PropertyFileName": "Evaluation", "OutputName": "report", "FilePath": "evaluation.json"}]
     metadata = {"release_id": result("release_id"), "manifest_sha256": result("subject.manifest_sha256"),
