@@ -3,7 +3,7 @@ azs               = ["us-east-1a", "us-east-1b"]
 operator_role_arn = "arn:aws:iam::REPLACE_ACCOUNT_ID:role/REPLACE_OPERATOR_ROLE"
 operator_cidr     = "REPLACE_PRIVATE_OPERATOR_CIDR"
 gpu_instance_type = "REPLACE_WITH_REVIEWED_GPU_INSTANCE_TYPE"
-gpu_enabled       = false # Enable only when the evaluated release is ready to serve.
+gpu_enabled       = false # Enable after the checked model files are published for serving.
 # Optional: use a reviewed equivalent GPU size if one zone has no capacity.
 # gpu_instance_type_overrides = { "us-east-1a" = "g6e.4xlarge" }
 domain_name         = "example.com"
