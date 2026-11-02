@@ -81,6 +81,16 @@ class PipelineTests(unittest.TestCase):
             self.assertFalse(result["execution_started"])
             stub.assert_no_pending_responses()
 
+    def test_capacity_fallback_preserves_gpu_encryption_and_release_gate(self):
+        config = dict(self.config, evaluation_instance_type="ml.g6e.4xlarge")
+        definition = build(config, "d" * 64, "e" * 64)
+        cluster = definition["Steps"][1]["Arguments"]["ProcessingResources"]["ClusterConfig"]
+        self.assertEqual(cluster["InstanceType"], "ml.g6e.4xlarge")
+        self.assertNotIn("VolumeKmsKeyId", cluster)
+        self.assertEqual(definition["Steps"][2], self.definition["Steps"][2])
+        with self.assertRaises(ValueError):
+            build(dict(config, evaluation_instance_type="ml.g6e.48xlarge"), "d" * 64, "e" * 64)
+
 
 if __name__ == "__main__":
     unittest.main()

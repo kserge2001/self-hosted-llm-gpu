@@ -111,12 +111,27 @@ def promote(s3, sagemaker, package_arn, evidence_bucket, quarantine_bucket,
 def main():
     import boto3
     import json
+    from pathlib import Path
     parser = argparse.ArgumentParser()
-    for name in ("package-arn", "evidence-bucket", "quarantine-bucket", "release-bucket", "package-group"):
-        parser.add_argument("--" + name, required=True)
+    parser.add_argument("--package-arn", required=True)
+    parser.add_argument("--outputs", help="Foundation outputs; assumes the supplied promotion role")
+    for name in ("evidence-bucket", "quarantine-bucket", "release-bucket", "package-group"):
+        parser.add_argument("--" + name)
     args = parser.parse_args()
     session = boto3.Session(region_name="us-east-1")
-    result = promote(session.client("s3"), session.client("sagemaker"), **vars(args))
+    if args.outputs:
+        settings = json.loads(Path(args.outputs).read_bytes())["model_pipeline"]["value"]
+        credentials = session.client("sts").assume_role(RoleArn=settings["promotion_role_arn"],
+            RoleSessionName="astra-model-publication", DurationSeconds=3600)["Credentials"]
+        session = boto3.Session(region_name="us-east-1", aws_access_key_id=credentials["AccessKeyId"],
+            aws_secret_access_key=credentials["SecretAccessKey"], aws_session_token=credentials["SessionToken"])
+        arguments = {name: settings[name] for name in ("evidence_bucket", "quarantine_bucket", "release_bucket")}
+        arguments["package_group"] = settings["model_package_group"]
+    else:
+        arguments = {name: getattr(args, name) for name in ("evidence_bucket", "quarantine_bucket", "release_bucket", "package_group")}
+        if not all(arguments.values()):
+            parser.error("Provide --outputs or all four bucket/group arguments")
+    result = promote(session.client("s3"), session.client("sagemaker"), package_arn=args.package_arn, **arguments)
     print(json.dumps(result))
 
 

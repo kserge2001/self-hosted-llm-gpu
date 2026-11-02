@@ -80,7 +80,10 @@ def build(config, policy_sha256, evalset_sha256):
             "--runtime-exception-uri", exception["uri"], "--runtime-exception-version", exception["version"],
             "--runtime-exception-sha256", exception["sha256"],
         ])
-    evaluation = processing("Evaluate", "evaluate", config["runtime_image"], "ml.g6e.2xlarge",
+    evaluation_instance = config.get("evaluation_instance_type", "ml.g6e.2xlarge")
+    if evaluation_instance not in {"ml.g6e.2xlarge", "ml.g6e.4xlarge"}:
+        raise ValueError("Use a supported single-GPU G6e evaluation instance")
+    evaluation = processing("Evaluate", "evaluate", config["runtime_image"], evaluation_instance,
                             config["evaluation_role_arn"], [
                                 "--validation-uri", join(root, "validation.json"),
                                 "--mlflow-arn", config["mlflow_arn"], "--mlflow-bucket", config["mlflow_bucket"],
