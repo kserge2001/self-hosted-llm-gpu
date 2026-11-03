@@ -44,13 +44,15 @@ Keep Terraform state in the same local `infra` directory through cleanup. State,
 
 Kodelumi is the student build guide. The [AWS Console companion](docs/aws-console-guide.md) documents the corresponding resource screens and the limits of a manual route. A complete click-only deployment of the unchanged Kubernetes stack is not yet provided.
 
-`setup_operator.sh` prepares a fresh CloudShell VPC checkout without creating AWS resources. The November 3 lesson edits add the private-access procedure, exact file transfers, separate dashboard logins, and cleanup commands. These edits await publication in Kodelumi; the published course still contains the November 2 text.
+`setup_operator.sh` prepares a fresh CloudShell VPC checkout without creating AWS resources. All eleven November 3 lessons are published in Kodelumi. They include the private-access procedure, exact file transfers, separate dashboard logins, and cleanup commands. The model-preparation lesson explains the supplied checks without a model-question exercise.
 
 ## Validation status
 
-The November 2, 2026 rehearsal returned an Astra response over HTTPS. Both assistants called their infrastructure tools, Grafana displayed GPU measurements, MLflow recorded prompts and traces, and the loader verified the 76 model files.
+The November 2, 2026 rehearsal returned an Astra response over HTTPS on one `g6e.8xlarge`. Both assistants called their infrastructure tools, Grafana displayed GPU measurements, MLflow recorded prompts and traces, and the loader verified the 76 model files.
 
 That run used one GPU because AWS could not allocate the second-zone GPU. Two-zone serving and an independent walkthrough of every revised student command remain unverified. The latest model-preparation and repository cleanup changes have local checks only; they have not been redeployed in AWS.
+
+On November 3, a fresh checkout installed the locked dependencies and retrieved the pinned model metadata. The course uses uv's copy mode to avoid hard-link failures in OneDrive workspaces. The starter passed 103 software tests and its client and assistant compatibility checks.
 
 The rehearsal infrastructure was removed. Its service URLs are no longer live. Retained model files, images, logs, snapshots, and encryption keys may still incur charges.
 

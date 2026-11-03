@@ -12,7 +12,7 @@ Select **US East (N. Virginia), us-east-1**. Record your stack name, AWS account
 
 Keep a local record of the IDs returned by each creation screen. Later services need the actual subnet, security-group, bucket, key, and role identifiers, not their display labels. Do not copy the instructor's account identifiers.
 
-The course's tested deployment uses EKS 1.35, two `m6i.large` CPU workers, two independently scheduled `g6e.xlarge` model workers, RDS PostgreSQL 17, Redis OSS 7.1, and a Small managed MLflow server. GPU availability must be confirmed at launch. Keep GPU workers off until model files and the server image are prepared.
+The design uses EKS 1.35, two `m6i.large` CPU workers, two independently scheduled GPU model workers, RDS PostgreSQL 17, Redis OSS 7.1, and a Small managed MLflow server. The November 2 rehearsal served Astra on one `g6e.8xlarge`; AWS could not allocate the second-zone worker. Use that instance size to match the tested worker. Smaller sizes and two-zone serving remain unverified. Each `g6e.8xlarge` has one L40S GPU with 48 GB of GPU memory, 32 vCPUs, and 256 GiB of host memory. [AWS G6e specifications](https://aws.amazon.com/ec2/instance-types/g6e/). Keep GPU workers off until model files and the server image are prepared.
 
 ## 2. Create the two-zone network
 
@@ -62,7 +62,7 @@ Open the cluster's **Compute → Node groups → Add node group**. Create one CP
 
 For exact encryption and volume settings, use the EC2 launch-template section offered by the node-group creation flow. When supplying a launch template, follow the [EKS launch-template requirements](https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html); do not independently set conflicting AMI or network-interface settings.
 
-After model preparation, create one GPU group per zone with AL2023 x86-64 NVIDIA AMI, `g6e.xlarge`, desired/minimum 1, maximum 2, and encrypted 200-GiB gp3 root storage. Label it `astra/tier=gpu` and add taint `nvidia.com/gpu=true` with effect **NoSchedule**. Each group uses only its zone's application subnet.
+After model preparation, create one GPU group per zone with AL2023 x86-64 NVIDIA AMI, `g6e.8xlarge`, desired/minimum 1, maximum 2, and encrypted 200-GiB gp3 root storage. Label it `astra/tier=gpu` and add taint `nvidia.com/gpu=true` with effect **NoSchedule**. Each group uses only its zone's application subnet. Confirm the required quota, current price, and both zones' capacity before starting the classroom run.
 
 The supplied NVIDIA device-plugin installation advertises the GPU to Kubernetes. A node appearing in EC2 does not prove that vLLM has loaded the model.
 
