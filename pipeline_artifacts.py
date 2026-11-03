@@ -1,4 +1,4 @@
-"""Version-bound artifacts shared by validation, evaluation and promotion."""
+"""Version-bound model artifacts shared by file checks and publication."""
 
 import hashlib
 import json

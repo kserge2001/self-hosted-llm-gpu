@@ -15,7 +15,9 @@ from render_manifest import render
 ROOT = Path(__file__).resolve().parent
 
 
-def prepare(s3, settings, output):
+def prepare(s3, settings, output, component="all"):
+    if component not in {"all", "model", "assistants"}:
+        raise ValueError("Choose model, assistants or all")
     reference = settings["release"]
     manifest = read_pinned_json(s3, reference["uri"], reference["version"], reference["sha256"])
     validate_manifest(manifest)
@@ -24,22 +26,25 @@ def prepare(s3, settings, output):
     if bucket != settings["release_bucket"] or key != f"releases/{manifest['release_id']}/release-manifest.json":
         raise ValueError("Use the expected promoted release bucket and manifest path")
     if manifest["runtime_image"].rsplit("@", 1)[-1] != manifest["subject"]["runtime_digest"]:
-        raise ValueError("Runtime differs from the evaluated release")
+        raise ValueError("Runtime differs from the prepared release")
     common = {
         "RELEASE_ID": manifest["release_id"], "RUNTIME_IMAGE": manifest["runtime_image"],
         "RELEASE_BUCKET": bucket, "MANIFEST_KEY": key, "MANIFEST_VERSION": reference["version"],
         "MANIFEST_SHA256": reference["sha256"], "LOADER_IMAGE": settings["loader_image"],
-        "SERVING_ROLE_ARN": settings["serving_role_arn"], "APP_VERSION": settings["git_revision"],
-        "ASSISTANT_IMAGE": settings["assistant_image"], "EVALSET_SHA256": manifest["subject"]["evalset_sha256"],
-        "MLFLOW_TRACKING_ARN": settings["mlflow_arn"], "ASTRA_HOST": settings["astra_host"],
-        "EXPECTED_ALB_ARN": settings["alb_arn"], "COGNITO_CLIENT_ID": settings["cognito_client_id"],
+        "SERVING_ROLE_ARN": settings["serving_role_arn"],
     }
-    if not re.fullmatch(r"[a-f0-9]{40}", common["APP_VERSION"]):
+    documents = {}
+    if component in {"all", "model"}:
+        documents["model/model.yaml"] = render((ROOT / "k8s/vllm.yaml").read_text(), common)
+    if component in {"all", "assistants"}:
+        common.update(APP_VERSION=settings["git_revision"], ASSISTANT_IMAGE=settings["assistant_image"],
+            MLFLOW_TRACKING_ARN=settings["mlflow_arn"],
+            ASTRA_HOST=settings["astra_host"], EXPECTED_ALB_ARN=settings["alb_arn"],
+            COGNITO_CLIENT_ID=settings["cognito_client_id"])
+    if component != "model" and not re.fullmatch(r"[a-f0-9]{40}", common["APP_VERSION"]):
         raise ValueError("Pin the application source commit")
-    if not re.fullmatch(r"[a-f0-9]{64}", common["EVALSET_SHA256"]):
-        raise ValueError("Missing evaluation dataset identity")
-    documents = {"model/model.yaml": render((ROOT / "k8s/vllm.yaml").read_text(), common)}
-    for kind, name in (("kubernetes", "k8s-assistant"), ("aws", "aws-assistant")):
+    assistants = (("kubernetes", "k8s-assistant"), ("aws", "aws-assistant")) if component != "model" else ()
+    for kind, name in assistants:
         prompt = settings["prompts"][kind]
         if not re.fullmatch(r"prompts:/[A-Za-z0-9_.-]+/[1-9][0-9]*", prompt["uri"]):
             raise ValueError("Pin a numeric prompt version")
@@ -61,9 +66,10 @@ def prepare(s3, settings, output):
             + "\n---\n" + yaml.safe_dump({"apiVersion": "v1", "kind": "ConfigMap",
                 "metadata": {"name": prompt_config, "namespace": name}, "immutable": True,
                 "data": {"prompt.txt": prompt["template"]}}, sort_keys=False))
-    documents["assistants/tool-permissions.yaml"] = (
-        "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: synthetic\n---\n"
-        + (ROOT / "k8s/assistant-rbac.yaml").read_text())
+    if component != "model":
+        documents["assistants/tool-permissions.yaml"] = (
+            "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: synthetic\n---\n"
+            + (ROOT / "k8s/assistant-rbac.yaml").read_text())
     # Validate every document and destination before writing any file.
     output = Path(output)
     for relative, text in documents.items():
@@ -84,11 +90,27 @@ def prepare(s3, settings, output):
 def main():
     import boto3
     parser = argparse.ArgumentParser()
-    parser.add_argument("config")
+    parser.add_argument("config", nargs="?", help="Complete deployment settings for assistants or an existing workflow")
     parser.add_argument("--output", default="deploy")
+    parser.add_argument("--component", choices=["all", "model", "assistants"], default="all")
+    parser.add_argument("--release", help="Promoted-release record for the first model deployment")
+    parser.add_argument("--outputs", default="foundation-outputs.json")
+    parser.add_argument("--images", default="evidence/images.json")
     args = parser.parse_args()
-    settings = json.loads(Path(args.config).read_bytes())
-    print(json.dumps(prepare(boto3.client("s3", region_name="us-east-1"), settings, args.output), indent=2))
+    if args.release:
+        if args.config or args.component != "model":
+            parser.error("Use --release with --component model and no settings file")
+        foundation = {k: v["value"] for k, v in json.loads(Path(args.outputs).read_bytes()).items()}
+        images = json.loads(Path(args.images).read_bytes())
+        settings = {"release": json.loads(Path(args.release).read_bytes()),
+                    "release_bucket": foundation["buckets"]["release"],
+                    "loader_image": images["loader"]["image"],
+                    "serving_role_arn": foundation["serving_role_arn"]}
+    elif args.config:
+        settings = json.loads(Path(args.config).read_bytes())
+    else:
+        parser.error("Provide a settings file or --component model --release RECORD")
+    print(json.dumps(prepare(boto3.client("s3", region_name="us-east-1"), settings, args.output, args.component), indent=2))
 
 
 if __name__ == "__main__":

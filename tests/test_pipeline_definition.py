@@ -1,7 +1,6 @@
 import copy
 import json
 import unittest
-from unittest.mock import Mock
 
 import boto3
 from botocore.stub import Stubber
@@ -16,7 +15,6 @@ class PipelineTests(unittest.TestCase):
         self.config = {
             "pipeline_name": "astra-test-model-release", "pipeline_role_arn": "arn:aws:iam::123456789012:role/pipeline",
             "validation_role_arn": "arn:aws:iam::123456789012:role/validation",
-            "evaluation_role_arn": "arn:aws:iam::123456789012:role/evaluation",
             "validation_image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/astra/validation@sha256:" + "a" * 64,
             "runtime_image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/astra/runtime@sha256:" + "b" * 64,
             "private_subnets": ["subnet-12345678"], "security_groups": ["sg-12345678"],
@@ -24,10 +22,8 @@ class PipelineTests(unittest.TestCase):
             "quarantine_bucket": "astra-test-quarantine", "evidence_bucket": "astra-test-evidence",
             "runtime_scan": {"uri": "s3://astra-test-evidence/runtime/scan.json", "version": "scan-version", "sha256": "c" * 64},
             "scan_log_group": "/astra/test/model-scans", "malware_plan_arn": "arn:aws:guardduty:us-east-1:123456789012:malware-protection-plan/test",
-            "mlflow_arn": "arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-server/test",
-            "mlflow_bucket": "astra-test-mlflow", "model_package_group": "astra-test",
         }
-        self.definition = build(self.config, "d" * 64, "e" * 64)
+        self.definition = build(self.config, "d" * 64)
         self.client = boto3.client("sagemaker", region_name="us-east-1", aws_access_key_id="testing", aws_secret_access_key="testing")
 
     def test_processing_arguments_match_aws_sdk_schema(self):
@@ -40,20 +36,29 @@ class PipelineTests(unittest.TestCase):
                 return [resolve(v) for v in value]
             return value
         model = self.client.meta.service_model.operation_model("CreateProcessingJob")
-        for step in self.definition["Steps"][:2]:
+        for step in self.definition["Steps"]:
             arguments = resolve(step["Arguments"])
             arguments["ProcessingJobName"] = "astra-test-job"
             validate_parameters(arguments, model.input_shape)
 
-    def test_unpinned_image_and_shared_role_fail(self):
+    def test_unpinned_image_and_missing_role_fail(self):
         bad = copy.deepcopy(self.config)
         bad["runtime_image"] = bad["runtime_image"].split("@")[0] + ":latest"
         with self.assertRaises(ValueError):
-            build(bad, "d" * 64, "e" * 64)
+            build(bad, "d" * 64)
         bad = copy.deepcopy(self.config)
-        bad["evaluation_role_arn"] = bad["validation_role_arn"]
+        bad["validation_role_arn"] = ""
         with self.assertRaises(ValueError):
-            build(bad, "d" * 64, "e" * 64)
+            build(bad, "d" * 64)
+
+    def test_file_checks_use_only_encrypted_cpu_processing(self):
+        self.assertEqual([step['Name'] for step in self.definition['Steps']], ['Validate'])
+        validation = self.definition['Steps'][0]
+        cpu = validation["Arguments"]["ProcessingResources"]["ClusterConfig"]
+        self.assertEqual(cpu["VolumeKmsKeyId"], self.config["kms_key_arn"])
+        self.assertEqual(cpu["InstanceType"], "ml.m5.xlarge")
+        self.assertEqual(validation["Arguments"]["ProcessingOutputConfig"]["KmsKeyId"], self.config["kms_key_arn"])
+        self.assertNotIn('--evalset-sha256', validation['Arguments']['AppSpecification']['ContainerArguments'])
 
     def test_creation_finds_matching_version_without_starting_job(self):
         arn = "arn:aws:sagemaker:us-east-1:123456789012:pipeline/astra-test-model-release"
@@ -70,6 +75,10 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(result["pipeline_version"], 1)
             self.assertFalse(result["execution_started"])
             stub.assert_no_pending_responses()
+
+    def test_legacy_evaluation_settings_do_not_add_a_gpu_job(self):
+        definition = build(dict(self.config, evaluation_instance_type="ml.g6e.4xlarge"), "d" * 64)
+        self.assertEqual(definition, self.definition)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: astra-model
+  namespace: argocd
+spec:
+  project: astra
+  source:
+    repoURL: ${GITOPS_REPOSITORY_URL}
+    targetRevision: ${GITOPS_REVISION}
+    path: deploy/model
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llm
+  syncPolicy:
+    syncOptions: [CreateNamespace=true]

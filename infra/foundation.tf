@@ -116,8 +116,11 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = module.vpc.private_route_table_ids
 }
 module "eks" {
-  source                                   = "terraform-aws-modules/eks/aws"
-  version                                  = "21.29.0"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.29.0"
+  # Module tags also populate worker launch-template tag specifications.
+  # Provider default tags alone do not tag EC2 instances launched by EKS.
+  tags                                     = { Project = "astra", ManagedBy = "Terraform", Environment = "development" }
   name                                     = var.name
   kubernetes_version                       = "1.35"
   endpoint_private_access                  = true
@@ -249,6 +252,12 @@ resource "aws_db_parameter_group" "gateway" {
     apply_method = "pending-reboot"
   }
 }
+variable "final_database_snapshot_identifier" {
+  description = "Optional unique final-snapshot name when an earlier rehearsal's snapshot is retained."
+  type        = string
+  default     = null
+}
+
 resource "aws_db_instance" "gateway" {
   identifier                  = "${var.name}-gateway"
   engine                      = "postgres"
@@ -270,7 +279,7 @@ resource "aws_db_instance" "gateway" {
   backup_retention_period     = 7
   deletion_protection         = var.database_deletion_protection
   skip_final_snapshot         = !var.retain_final_database_snapshot
-  final_snapshot_identifier   = "${var.name}-gateway-final"
+  final_snapshot_identifier   = var.final_database_snapshot_identifier != null ? var.final_database_snapshot_identifier : "${var.name}-gateway-final"
 }
 resource "random_password" "redis" {
   length  = 40

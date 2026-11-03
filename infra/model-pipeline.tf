@@ -46,13 +46,15 @@ resource "aws_iam_role_policy" "processing" {
     { Effect = "Allow", Action = ["s3:ListBucket", "s3:GetBucketLocation"], Resource = [
     aws_s3_bucket.data["quarantine"].arn, aws_s3_bucket.data["evidence"].arn] },
     { Effect = "Allow", Action = ["s3:PutObject", "s3:AbortMultipartUpload"], Resource = "${aws_s3_bucket.data["evidence"].arn}/pipeline/*" },
-    { Effect = "Allow", Action = ["kms:Decrypt", "kms:GenerateDataKey", "kms:DescribeKey"], Resource = aws_kms_key.platform.arn },
-    { Effect = "Allow", Action = "kms:CreateGrant", Resource = aws_kms_key.platform.arn,
-    Condition = { Bool = { "kms:GrantIsForAWSResource" = "true" } } },
+    { Effect = "Allow", Action = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"], Resource = aws_kms_key.platform.arn },
+    # SageMaker's Processing grant request does not supply GrantIsForAWSResource.
+    # Scope the permission to this stack's key and isolated Processing roles.
+    { Effect = "Allow", Action = "kms:CreateGrant", Resource = aws_kms_key.platform.arn },
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"],
     Resource = [for repo in aws_ecr_repository.images : repo.arn] },
-    { Effect = "Allow", Action = ["logs:CreateLogGroup"], Resource = local.processing_log_arn },
+    { Effect = "Allow", Action = ["logs:CreateLogGroup", "logs:DescribeLogStreams"],
+    Resource = [local.processing_log_arn, "${local.processing_log_arn}:*"] },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${local.processing_log_arn}:*" },
     { Effect = "Allow", Action = ["ec2:CreateNetworkInterface", "ec2:CreateNetworkInterfacePermission", "ec2:DeleteNetworkInterface",
       "ec2:DeleteNetworkInterfacePermission", "ec2:DescribeNetworkInterfaces", "ec2:DescribeVpcs", "ec2:DescribeDhcpOptions",
@@ -80,7 +82,7 @@ resource "aws_iam_role_policy" "model_pipeline" {
   name = "validate-evaluate-register-only"
   role = aws_iam_role.model_pipeline.id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = ["sagemaker:CreateProcessingJob", "sagemaker:DescribeProcessingJob", "sagemaker:StopProcessingJob"],
+    { Effect = "Allow", Action = ["sagemaker:CreateProcessingJob", "sagemaker:DescribeProcessingJob", "sagemaker:StopProcessingJob", "sagemaker:AddTags"],
     Resource = "arn:aws:sagemaker:us-east-1:${data.aws_caller_identity.platform.account_id}:processing-job/*" },
     { Effect = "Allow", Action = ["sagemaker:CreateModelPackage", "sagemaker:DescribeModelPackage", "sagemaker:DescribeModelPackageGroup", "sagemaker:AddTags"],
     Resource = local.package_arns },
@@ -107,7 +109,7 @@ resource "aws_iam_role_policy" "model_promotion" {
     { Effect = "Allow", Action = ["s3:GetObject", "s3:GetObjectVersion"], Resource = [
       "${aws_s3_bucket.data["quarantine"].arn}/candidates/*", "${aws_s3_bucket.data["evidence"].arn}/pipeline/*",
     "${aws_s3_bucket.data["release"].arn}/releases/*"] },
-    { Effect = "Allow", Action = "s3:PutObject", Resource = "${aws_s3_bucket.data["release"].arn}/releases/*" },
+    { Effect = "Allow", Action = ["s3:PutObject", "s3:AbortMultipartUpload"], Resource = "${aws_s3_bucket.data["release"].arn}/releases/*" },
     { Effect = "Allow", Action = ["kms:Decrypt", "kms:GenerateDataKey"], Resource = aws_kms_key.platform.arn },
     { Effect = "Deny", Action = "sagemaker:UpdateModelPackage", Resource = "*" }
   ] })

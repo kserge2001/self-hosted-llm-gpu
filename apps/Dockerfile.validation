@@ -10,6 +10,6 @@ COPY --from=python /usr/local/ /usr/local/
 RUN ldconfig && python -c "import ssl, sqlite3, bz2, lzma, ctypes, readline, curses, uuid, dbm.gnu"
 COPY apps/validation-requirements.lock /tmp/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock && pip check && python -m pip uninstall -y pip
-COPY pipeline_worker.py pipeline_artifacts.py runtime_exception.py evaluate_model.py managed_mlflow.py artifact_loader.py model_intake.py quarantine_intake.py scan_gate.py /opt/astra/
-COPY evaluation /opt/astra/evaluation
+COPY pipeline_worker.py pipeline_artifacts.py runtime_exception.py artifact_loader.py model_intake.py quarantine_intake.py scan_gate.py /opt/astra/
+COPY model-policy.json /opt/astra/model-policy.json
 ENTRYPOINT ["python3", "/opt/astra/pipeline_worker.py"]

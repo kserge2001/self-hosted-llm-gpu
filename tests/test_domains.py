@@ -41,6 +41,14 @@ def fixture(domain="example.com"):
 
 
 class DomainTests(unittest.TestCase):
+    def test_private_operator_uses_saved_outputs_without_terraform_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "outputs.json"
+            path.write_text(json.dumps({"domain_configuration": {"value": fixture()}}))
+            with patch.dict("os.environ", {"FOUNDATION_OUTPUTS_FILE": str(path)}), patch.object(domains, "command") as command:
+                self.assertEqual(domains.read_config(), fixture())
+                command.assert_not_called()
+
     def test_litellm_root_opens_ui_without_redirecting_api_calls(self):
         resources = domains.build_routes(fixture(), ["litellm", "inference"])
         routes = {r["metadata"]["name"]: r for r in resources if r["kind"] == "HTTPRoute"}

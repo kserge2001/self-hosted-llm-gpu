@@ -1,7 +1,0 @@
-{
-  "release_id": "astra-001",
-  "pipeline_version": 1,
-  "manifest_uri": "s3://REPLACE-WITH-YOUR-EVIDENCE-BUCKET/candidates/astra-001.json",
-  "manifest_version": "REPLACE-WITH-S3-OBJECT-VERSION",
-  "manifest_sha256": "REPLACE-WITH-64-CHARACTER-SHA256"
-}

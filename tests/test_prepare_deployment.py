@@ -22,7 +22,7 @@ class DeploymentTests(unittest.TestCase):
     def setUp(self):
         digest = "a" * 64
         self.manifest = {"schema": 1, "release_id": "astra-test", "runtime_image": "example/runtime@sha256:" + digest,
-                         "subject": {"runtime_digest": "sha256:" + digest, "evalset_sha256": "b" * 64},
+                         "subject": {"runtime_digest": "sha256:" + digest},
                          "files": [{"path": name, "key": "releases/astra-test/files/" + name,
                                     "version_id": "version", "sha256": "c" * 64, "bytes": 5}
                                    for name in ["config.json", "model.safetensors"]]}
@@ -63,6 +63,20 @@ class DeploymentTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Bundled prompt differs"):
                 self.render(directory)
             self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_model_can_be_prepared_before_assistant_configuration(self):
+        body = json.dumps(self.manifest).encode()
+        self.config["release"]["sha256"] = hashlib.sha256(body).hexdigest()
+        model_settings = {k: self.config[k] for k in ("release", "release_bucket", "loader_image", "serving_role_arn")}
+        with tempfile.TemporaryDirectory() as directory:
+            result = prepare(StoredManifest(body), model_settings, directory, "model")
+            model_path = Path(directory) / "model/model.yaml"
+            before = model_path.read_bytes()
+            self.assertEqual(list(result["files"]), ["model/model.yaml"])
+            self.assertFalse((Path(directory) / "assistants").exists())
+            prepare(StoredManifest(body), self.config, directory, "assistants")
+            self.assertEqual(model_path.read_bytes(), before)
+            self.assertTrue((Path(directory) / "assistants/k8s-assistant.yaml").exists())
 
     def test_runtime_substitution_is_rejected_before_writing(self):
         self.manifest["subject"]["runtime_digest"] = "sha256:" + "f" * 64

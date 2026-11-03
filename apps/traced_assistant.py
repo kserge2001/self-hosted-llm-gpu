@@ -15,7 +15,6 @@ def traced_ask(client, tools, dispatch, prompt_text, question, user):
                 "application_image": os.environ["APP_IMAGE"],
                 "prompt_sha256": os.environ["PROMPT_SHA256"],
                 "tool_schema_sha256": os.environ["TOOL_SCHEMA_SHA256"],
-                "evalset_sha256": os.environ["EVALSET_SHA256"],
             }
         )
         result = run_loop(

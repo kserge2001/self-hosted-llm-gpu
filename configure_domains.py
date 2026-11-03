@@ -7,6 +7,7 @@ backend Services and a ready AWS Load Balancer Controller.
 import argparse
 import ipaddress
 import json
+import os
 import re
 import subprocess
 import sys
@@ -31,6 +32,9 @@ def read_config(path=None):
     """Read the service addresses from a saved file or Terraform output."""
     if path:
         raw = Path(path).read_text(encoding="utf-8-sig")
+    elif os.environ.get("FOUNDATION_OUTPUTS_FILE"):
+        saved = json.loads(Path(os.environ["FOUNDATION_OUTPUTS_FILE"]).read_bytes())
+        return saved["domain_configuration"]["value"]
     else:
         raw = command(
             [

@@ -1,4 +1,4 @@
-name: PR checks
+name: Starter checks
 on:
   push:
     branches: [main, 'e2e/astra', 'codex/astra-classroom-readiness']
@@ -23,20 +23,16 @@ jobs:
         with:
           terraform_version: '1.15.9'
           terraform_wrapper: false
-      - name: Test Python and release requests
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+      - name: Check the supplied Python implementation
         run: |
-          python -m pip install --require-hashes --requirement requirements.lock
+          bash setup_operator.sh
+          export PATH="$PWD/.tools/bin:$PATH"
+          source .venv/bin/activate
+          kubectl version --client
+          helm version
           python -m unittest discover -s tests -v
           python checks/client_compatibility.py
           python checks/assistant_compatibility.py
-          python release_requests.py validate
-          if [ "$EVENT_NAME" = pull_request ]; then
-            python release_requests.py changed "$BASE_SHA" "$HEAD_SHA"
-          fi
       - name: Validate Terraform without AWS credentials
         run: |
           terraform -chdir=infra fmt -check

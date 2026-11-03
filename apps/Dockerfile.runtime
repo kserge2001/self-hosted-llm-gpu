@@ -15,9 +15,7 @@ RUN python3 -m pip install --no-cache-dir --no-deps --require-hashes --upgrade -
 COPY checks/runtime_dependencies.py /tmp/runtime_dependencies.py
 RUN python3 /tmp/runtime_dependencies.py
 RUN python3 -c "from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter; from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter"
-# Installation tools are not used by offline model serving or Processing.
+# Installation tools are not used by offline model serving.
 # Remove their binaries, bundled Python libraries and build-time SBOMs together.
 RUN python3 -m pip uninstall -y uv && python3 /tmp/runtime_dependencies.py && python3 -m pip uninstall -y pip
-COPY pipeline_worker.py pipeline_artifacts.py evaluate_model.py managed_mlflow.py artifact_loader.py model_intake.py quarantine_intake.py scan_gate.py /opt/astra/
-COPY evaluation /opt/astra/evaluation
-# This is a candidate until the new image passes scanning and GPU evaluation.
+# Verify the image scan and a serving request before classroom use.
