@@ -85,9 +85,7 @@ def save(args, s3, report, name):
     output = Path("/opt/ml/processing/output")
     output.mkdir(parents=True, exist_ok=True)
     value = {"passed": report["passed"], "evidence": reference,
-             "release_id": report["release_id"], "subject": report["subject"],
-             "mlflow_run_id": report.get("mlflow_run_id", ""),
-             "model_source": report.get("model_source", "")}
+             "release_id": report["release_id"], "subject": report["subject"]}
     (output / f"{name}.json").write_text(json.dumps(value), encoding="utf-8")
     print(json.dumps(value), flush=True)
 

@@ -4,6 +4,8 @@ Build CareCart's internal inference service on AWS: a model on private EKS GPUs,
 
 Follow the [Astra capstone in Kodelumi](https://kodelumi.com/w/49_OMkQYNp9zuC57). The cleaned starter is on [`codex/astra-classroom-readiness`](https://github.com/kserge2001/self-hosted-llm-gpu/tree/codex/astra-classroom-readiness), pending merge into `main`.
 
+The `evaluation/` question suite has been removed from this branch. Until [PR #1](https://github.com/kserge2001/self-hosted-llm-gpu/pull/1) is merged, `main` still contains the old files.
+
 ## Build sequence
 
 1. Prepare the code, pinned model metadata, and container images.
@@ -26,9 +28,13 @@ The design has two complete model replicas and two gateway replicas across two A
 - Root Python helpers: model download and file preparation, configuration, deployment, access, and cleanup.
 - `.github/workflows/`, `checks/`, and `tests/`: supplied automation and software checks.
 
+`tests/` checks the Python helpers, permissions, file handling, and cleanup behavior. It is maintained with the starter code; students do not answer test questions or run a model-scoring exercise. The serving check is one request through `first_request.py` and an answer from Astra.
+
 The model preparation checks cover source and revision, license, file integrity and format, malware, and the server image scan. Students do not build a model evaluation suite or PR approval process. The course explains the supplied pipeline with a diagram and a brief checks note. The optional GitHub model-preparation workflow runs only when manually started; pushing this repository does not launch an AWS job.
 
 MCP routing and guardrails are explained as LiteLLM capabilities. They are not configured features of this deployment. MLflow remains for prompts and request traces.
+
+`model-policy.json` contains the model source and file-check settings. Serving limits are defined in `k8s/vllm.yaml`.
 
 ## Using this starter
 

@@ -1,7 +1,6 @@
 import copy
 import json
 import unittest
-from unittest.mock import Mock
 
 import boto3
 from botocore.stub import Stubber
@@ -16,7 +15,6 @@ class PipelineTests(unittest.TestCase):
         self.config = {
             "pipeline_name": "astra-test-model-release", "pipeline_role_arn": "arn:aws:iam::123456789012:role/pipeline",
             "validation_role_arn": "arn:aws:iam::123456789012:role/validation",
-            "evaluation_role_arn": "arn:aws:iam::123456789012:role/evaluation",
             "validation_image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/astra/validation@sha256:" + "a" * 64,
             "runtime_image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/astra/runtime@sha256:" + "b" * 64,
             "private_subnets": ["subnet-12345678"], "security_groups": ["sg-12345678"],
@@ -24,8 +22,6 @@ class PipelineTests(unittest.TestCase):
             "quarantine_bucket": "astra-test-quarantine", "evidence_bucket": "astra-test-evidence",
             "runtime_scan": {"uri": "s3://astra-test-evidence/runtime/scan.json", "version": "scan-version", "sha256": "c" * 64},
             "scan_log_group": "/astra/test/model-scans", "malware_plan_arn": "arn:aws:guardduty:us-east-1:123456789012:malware-protection-plan/test",
-            "mlflow_arn": "arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-server/test",
-            "mlflow_bucket": "astra-test-mlflow", "model_package_group": "astra-test",
         }
         self.definition = build(self.config, "d" * 64)
         self.client = boto3.client("sagemaker", region_name="us-east-1", aws_access_key_id="testing", aws_secret_access_key="testing")
@@ -40,7 +36,7 @@ class PipelineTests(unittest.TestCase):
                 return [resolve(v) for v in value]
             return value
         model = self.client.meta.service_model.operation_model("CreateProcessingJob")
-        for step in self.definition["Steps"][:2]:
+        for step in self.definition["Steps"]:
             arguments = resolve(step["Arguments"])
             arguments["ProcessingJobName"] = "astra-test-job"
             validate_parameters(arguments, model.input_shape)

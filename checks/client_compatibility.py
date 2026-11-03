@@ -1,4 +1,4 @@
-"""Exercise real local MLflow APIs. This does not test SageMaker or a model."""
+"""Exercise local MLflow APIs. This does not test SageMaker or a model."""
 
 import sys
 import tempfile

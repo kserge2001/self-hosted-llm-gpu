@@ -39,7 +39,7 @@ def build(config, policy_sha256):
         "--runtime-image", config["runtime_image"], "--policy-sha256", policy_sha256,
     ]
 
-    def processing(name, stage, image, instance, role, extra, max_seconds, volume_kms=True):
+    def processing(name, stage, image, instance, role, extra, max_seconds):
         return {"Name": name, "Type": "Processing", "Arguments": {
             "AppSpecification": {"ImageUri": image, "ContainerEntrypoint": ["python3", "/opt/astra/pipeline_worker.py"],
                                  "ContainerArguments": [stage, *common_args, *extra]},
@@ -47,8 +47,7 @@ def build(config, policy_sha256):
             "Tags": [{"Key": "Project", "Value": "astra"},
                      {"Key": "AstraPipeline", "Value": config["pipeline_name"]}],
             "ProcessingResources": {"ClusterConfig": {"InstanceCount": 1, "InstanceType": instance,
-                                     "VolumeSizeInGB": 150,
-                                     **({"VolumeKmsKeyId": config["kms_key_arn"]} if volume_kms else {})}},
+                                     "VolumeSizeInGB": 150, "VolumeKmsKeyId": config["kms_key_arn"]}},
             "StoppingCondition": {"MaxRuntimeInSeconds": max_seconds},
             "NetworkConfig": {"EnableNetworkIsolation": False, "EnableInterContainerTrafficEncryption": True,
                               "VpcConfig": {"Subnets": config["private_subnets"], "SecurityGroupIds": config["security_groups"]}},
