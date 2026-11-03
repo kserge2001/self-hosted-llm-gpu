@@ -36,7 +36,9 @@ Use your own repository, AWS account, domain, certificate, and authorized connec
 
 Keep Terraform state in the same local `infra` directory through cleanup. State, saved plans, generated secrets, and private account inputs stay out of Git; `.terraform.lock.hcl` stays in version control.
 
-Kodelumi is the student build guide. Duplicate engineering guides have been removed from this starter. The separate Console-only walkthrough is still pending.
+Kodelumi is the student build guide. The [AWS Console companion](docs/aws-console-guide.md) documents the corresponding resource screens and the limits of a manual route. A complete click-only deployment of the unchanged Kubernetes stack is not yet provided.
+
+`setup_operator.sh` prepares a fresh CloudShell VPC checkout without creating AWS resources. The November 3 lesson edits add the private-access procedure, exact file transfers, separate dashboard logins, and cleanup commands. These edits await publication in Kodelumi; the published course still contains the November 2 text.
 
 ## Validation status
 
